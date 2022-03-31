@@ -33,7 +33,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                               
                               dateInput('date1',
                                         label = 'Date purchased',
-                                        value = Sys.Date()),
+                                        value = Sys.Date()-1),
                               
                               numericInput('quantity',
                                            label = 'Quantity of stock', min = 0, value = 0 ),
@@ -193,36 +193,41 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$add_portfolio , {
+    
+    temp <- portfolio$data
     prices <- getSymbols(input$ticker, auto.assign = F)
     
-    
-    
-    if (length(portfolio$data[,'ticker'])==0)
-      portfolio$data <- rbind(portfolio$data,
-                              data.frame(ticker = toupper(input$ticker),
+    if (length(portfolio$data[,'ticker'])==0){
+      print('1')
+      
+      portfolio$data <- data.frame(ticker = toupper(input$ticker),
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
-                                         purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6])
+                                         purchase_date = as.Date(input$date1),
+                                         purchase_price = as.numeric(prices[input$date1,6][1])
                               )
-      )
+      
+    }
     
     else if ((toupper(input$ticker) %in% unlist(as.vector(portfolio$data[,'ticker'])))){
+      print('2')
       temp <- portfolio$data
       r <- match(toupper(input$ticker),unlist(as.vector(temp[,'ticker'])))
       temp[r,'quantity'] <- temp[r,'quantity'] + input$quantity
       portfolio$data <- temp
     }
     
-    else 
-      portfolio$data <- rbind(portfolio$data,
+    else {
+      print('3')
+      portfolio$data <- rbind(temp,
                               data.frame(ticker = toupper(input$ticker),
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
                                          purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6])
+                                         purchase_price = as.numeric(prices[input$date1,6][1])
                               )
       )
+    }
   })
   
   
