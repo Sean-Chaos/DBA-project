@@ -10,7 +10,6 @@ library(bslib)
 
 
 
-
 ui <- navbarPage(title = 'Portfolio manager',
                  theme = bs_theme(version = 4, bootswatch = 'sandstone'),
                  tabPanel(title = 'Stock input',
