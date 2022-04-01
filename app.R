@@ -33,7 +33,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                               
                               dateInput('date1',
                                         label = 'Date purchased',
-                                        value = Sys.Date()),
+                                        value = Sys.Date()-1),
                               
                               numericInput('quantity',
                                            label = 'Quantity of stock', min = 0, value = 0 ),
@@ -105,8 +105,13 @@ ui <- navbarPage(title = 'Portfolio manager',
                             
                             
                             mainPanel(
+                              tabsetPanel(
+                                type = 'tabs',
+                                tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
+                                tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart'))
+                              ),
                               
-                              dygraphOutput('portfolio_chart')
+                              
                               
                             )
                             
@@ -123,7 +128,19 @@ ui <- navbarPage(title = 'Portfolio manager',
                  
                  
                  
-                 tabPanel(title = 'Individual peformace'),
+                 tabPanel(title = 'Sector peformace',
+                          headerPanel(title = 'Portfolio optimizer'),
+                          sidebarLayout(
+                            sidebarPanel(
+                              helpText('TEMP')
+                            ),
+                            
+                            mainPanel(
+                              helpText('TEMP'),
+                              plotlyOutput('sector_pie_chart')
+                            )
+                          ),
+                          ),
                  
                  
                  
@@ -207,7 +224,7 @@ server <- function(input, output, session) {
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
                                          purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6])
+                                         purchase_price = as.numeric(prices[input$date1,6][1])
                               )
       )
     
@@ -224,7 +241,7 @@ server <- function(input, output, session) {
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
                                          purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6])
+                                         purchase_price = as.numeric(prices[input$date1,6][1])
                               )
       )
   })
@@ -326,7 +343,7 @@ server <- function(input, output, session) {
   
   
   #portfolio tab stock chart
-  output$portfolio_chart <- renderDygraph({
+  output$portfolio_value_chart <- renderDygraph({
     
     # merge.xts for all stocks
     ticker_name <- portfolio$data[,1] %>% as.vector()
@@ -355,17 +372,6 @@ server <- function(input, output, session) {
       portfolio_returns <- do.call('merge.xts',temp)}
     
     
-    if (input$snp500){
-      snp <- getSymbols('SPY',
-                        from = input$slider2,
-                        to = Sys.Date(),
-                        auto.assign = F) [,6]
-      
-      portfolio_returns <- merge.xts(portfolio_returns, snp)
-    }
-    
-    else 
-      portfolio_returns <- portfolio_returns 
     
     
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
@@ -375,13 +381,120 @@ server <- function(input, output, session) {
     
     port_dollar <- cbind(port_dollar, portf=rowSums(port_dollar))
     
+    if (input$snp500){
+      snp <- getSymbols('SPY',
+                        from = input$slider2,
+                        to = Sys.Date(),
+                        auto.assign = F) [,6]
+      
+      port_dollar <- merge.xts(port_dollar, snp)
+    }
+    
+    else 
+      port_dollar <- port_dollar 
+    
     
     dygraph(port_dollar)
     
   })
   
+  #portfolio tab stock returns chart
+  
+  output$portfolio_returns_chart <- renderDygraph({
+    
+    # merge.xts for all stocks
+    ticker_name <- portfolio$data[,1] %>% as.vector()
+    
+    temp <- list()
+    
+    for (i in 1:length(ticker_name)){
+      
+      data <- na.omit(getSymbols(ticker_name[i], 
+                                 #change to slider 
+                                 from = input$slider2,
+                                 to = Sys.Date(),
+                                 auto.assign = F))[,6] 
+      
+      print(data[,1])
+      ## error is here
+      data$change <- c(-diff(data[,1])/data[,1][-1] *  100, NA)
+      
+      print(data)
+      
+      temp[[i]] <- assign(paste0('stock',as.character(i)), data)
+    }
+    
+    print(temp)
+    
+    if(length(ticker_name)==1){
+      portfolio_returns <- na.omit(getSymbols(ticker_name[1],
+                                              #change to slider 
+                                              from = input$slider2,
+                                              to = Sys.Date(),
+                                              auto.assign = F))[,6]}
+    
+    else{
+      portfolio_returns <- do.call('merge.xts',temp)}
+    
+    
+    if (input$snp500){
+      snp <- getSymbols('SPY',
+                        from = input$slider2,
+                        to = Sys.Date(),
+                        auto.assign = F) [,6]
+      
+      port_dollar <- merge.xts(portfolio_returns, snp)
+    }
+    
+    else 
+      port_dollar <- portfolio_returns 
+    
+    print(port_dollar)
+    
+    
+    dygraph(port_dollar)
+    
+    
+  })
   
   
+  
+  #sector allocation 
+  
+  output$sector_pie_chart <- renderPlotly({
+    
+    exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
+    
+    stocks <- portfolio$data 
+    stocks <- stocks %>% mutate(Total = quantity * last_price)
+    print(stocks)
+    
+    stock.sector <- inner_join(exchange_tickers_sectors, stocks, by= "ticker")
+    
+    stock.sector.num <- stock.sector %>% group_by(sector) %>%
+      summarize(Num.diff.stocks = n(),
+                Total.asset = round(sum(Total),2))
+    
+    #pie chart
+    
+    fig2 <- plot_ly(stock.sector.num, labels = ~sector, values = ~Total.asset, type = 'pie',
+                    textposition = 'inside',
+                    textinfo = 'label+percent',
+                    insidetextfont = list(color = 'Black'),
+                    hoverinfo = 'text',
+                    text = ~paste('</br> Number of different stocks: ', Num.diff.stocks,
+                                  '</br> Total amount: ', Total.asset),
+                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                    #The 'pull' attribute can also be used to create space between the sectors
+                    showlegend = TRUE)
+    fig2 <- fig2 %>% layout(title = 'Percentage of Assets per sector',
+                            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    
+    fig2
+    
+    
+  })
   
   
   
