@@ -194,8 +194,6 @@ server <- function(input, output, session) {
   
   observeEvent(input$add_portfolio , {
     
-    print(tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F)
-    
     if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F) 
       {return()}
     
