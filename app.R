@@ -18,6 +18,7 @@ library(roll)
 library(gganimate)
 library(gifski)
 library(png)
+library(RColorBrewer)
 
 
 ui <- navbarPage(title = 'Portfolio manager',
