@@ -7,7 +7,17 @@ library(timetk)
 library(PortfolioAnalytics)
 library(ggplot2)
 library(bslib)
-
+library(plotly)
+library(ggplot2)
+library(TTR)
+library(pander)
+library(RCurl)
+library(RJSONIO)
+library(ggtext)
+library(roll)
+library(gganimate)
+library(gifski)
+library(png)
 
 
 ui <- navbarPage(title = 'Portfolio manager',
@@ -229,7 +239,6 @@ server <- function(input, output, session) {
       portfolio$data <- data.frame(ticker = toupper(input$ticker),
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
-                                         purchase_date = as.Date(input$date1),
                                          purchase_date = input$date1,
                                          purchase_price = as.numeric(prices[input$date1,6][1])
                               )
@@ -503,6 +512,7 @@ server <- function(input, output, session) {
                     marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
+    
     fig2 <- fig2 %>% layout(title = 'Percentage of Assets per sector',
                             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
