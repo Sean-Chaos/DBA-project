@@ -81,6 +81,10 @@ ui <- navbarPage(title = 'Portfolio manager',
                                           step = 30
                               ),
                               
+                              checkboxInput('snp500',
+                                            label = 'Add S&P 500 as benchmark'),
+                              
+                              
                               helpText('Portfolio Value'),
                               textOutput('portfolio_value'),
                               htmlOutput('profit_loss_1'),
@@ -321,7 +325,7 @@ server <- function(input, output, session) {
   })
   
   
-  #portfolio tab chart
+  #portfolio tab stock chart
   output$portfolio_chart <- renderDygraph({
     
     # merge.xts for all stocks
@@ -349,6 +353,20 @@ server <- function(input, output, session) {
     
     else{
       portfolio_returns <- do.call('merge.xts',temp)}
+    
+    
+    if (input$snp500){
+      snp <- getSymbols('SPY',
+                        from = input$slider2,
+                        to = Sys.Date(),
+                        auto.assign = F) [,6]
+      
+      portfolio_returns <- merge.xts(portfolio_returns, snp)
+    }
+    
+    else 
+      portfolio_returns <- portfolio_returns 
+    
     
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
