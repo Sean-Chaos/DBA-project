@@ -177,7 +177,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                             ),
                             
                             mainPanel(
-                              plotOutput('piechart1'),
+                              plotlyOutput('piechart1'),
                               tableOutput('table1'),
                               
                             ),
@@ -564,6 +564,8 @@ server <- function(input, output, session) {
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
     
+    print(stock.sector.num)
+    
     #pie chart
     
     fig2 <- plot_ly(stock.sector.num, labels = ~sector, values = ~Total.asset, type = 'pie',
@@ -684,20 +686,46 @@ server <- function(input, output, session) {
   
   
   #portfolio optimisation piechart
-  output$piechart1 <- renderPlot({
+  output$piechart1 <- renderPlotly({
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     temp <- optimised_port$data
     
-    allocation <- data.frame(ticker = list_of_tickers,
-                             allocation = as.vector(temp$weights))
+    df <- data.frame(ticker = list_of_tickers,
+                     allocation = as.vector(temp$weights))
     
-    print(allocation)
+    print(df)
     
-    pie <- ggplot(allocation, aes(x='', y=allocation, fill=ticker)) + 
-      geom_bar(stat = 'identity', width = 1) +
-      coord_polar('y', start = 0) +
-      theme_void()
+    #pie <- ggplot(allocation, aes(x='', y=allocation, fill=ticker)) + 
+      #geom_bar(stat = 'identity', width = 1) +
+      #coord_polar('y', start = 0) +
+      #theme_void()
+    
+    
+    pie <- plot_ly(df, labels = ~ticker, values = ~allocation, type = 'pie',
+                    textposition = 'inside',
+                    textinfo = 'label+percent',
+                    insidetextfont = list(color = 'Black'),
+                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                    #The 'pull' attribute can also be used to create space between the sectors
+                    showlegend = TRUE)
+    
+    pie <- pie %>% layout(title = 'Percentage of Assets per sector',
+                            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    
+    pie
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     return(pie)
     
