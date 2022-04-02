@@ -19,6 +19,7 @@ library(gganimate)
 library(gifski)
 library(png)
 library(RColorBrewer)
+library(DT)
 
 
 ui <- navbarPage(title = 'Portfolio manager',
@@ -122,6 +123,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                 tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart'))
                               ),
                               
+                              DT::dataTableOutput('Stock_peformance')
                               
                               
                             )
@@ -405,7 +407,7 @@ server <- function(input, output, session) {
     
     port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
     
-    port_dollar <- cbind(port_dollar, portf=rowSums(port_dollar))
+    port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
     
     if (input$snp500){
       snp <- getSymbols('SPY',
@@ -425,7 +427,6 @@ server <- function(input, output, session) {
   })
   
   #portfolio tab stock returns chart
-  
   output$portfolio_returns_chart <- renderDygraph({
     
     # merge.xts for all stocks
@@ -482,6 +483,32 @@ server <- function(input, output, session) {
     
     
   })
+  
+  #portfolio tab profit loss table 
+  output$Stock_peformance <- renderDataTable({
+    
+    temp <- portfolio$data 
+    
+    out <- temp %>% transmute(Symbol = ticker,
+                              Qantity = quantity,
+                              Position = round(quantity * purchase_price,2),
+                              Last_price = round(last_price,2),
+                              Cost = round(purchase_price,2),
+                              Unrealised_gains = round(last_price - purchase_price,2),
+                              'Unrealised P&L' = paste0(as.character(round((last_price - purchase_price)/last_price * 100,2)),'%')
+                              )
+    
+    return(out)
+    
+  })
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
