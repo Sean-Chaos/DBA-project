@@ -507,6 +507,8 @@ server <- function(input, output, session) {
                         from = input$slider2,
                         to = Sys.Date(),
                         auto.assign = F) [,6])
+      snp[,1][1] <- 0
+      snp[,1] <- cumsum(snp[,1])
       
       port_dollar <- merge.xts(port_dollar, snp)
     }
@@ -589,6 +591,7 @@ server <- function(input, output, session) {
   })
   
   #sector moving averages comparison 
+  #this takes incredibly LONG LIKE WTF
   output$moving_ave <- renderPlot({
     
     vti_total_mkt_holdings <-
@@ -783,7 +786,7 @@ server <- function(input, output, session) {
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
     
-    pie <- pie %>% layout(title = 'Percentage of Assets per sector',
+    pie <- pie %>% layout(title = 'Optimised portfolio',
                             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
     
