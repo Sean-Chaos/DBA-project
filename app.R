@@ -100,12 +100,12 @@ ui <- navbarPage(title = 'Portfolio manager',
                               
                               
                               h4('Portfolio Value'),
-                              textOutput('portfolio_value'),
-                              htmlOutput('profit_loss_1'),
+                              h5(textOutput('portfolio_value')),
+                              h6(htmlOutput('profit_loss_1')),
                               
                               
                               
-                              helpText('This weeks biggest movers'),
+                              h6('This weeks biggest movers'),
                               
                               
                               
@@ -166,7 +166,9 @@ ui <- navbarPage(title = 'Portfolio manager',
                           
                           sidebarLayout(
                             sidebarPanel(
-                              helpText('Please choose how you would like to optimise your portfolio'),
+                              h6('Please choose how you would like to optimise your portfolio'),
+                              helpText('You must have input at least 2 stocks for the optimiser to work '),
+                              
                               actionButton('min_risk',
                                            label = 'Minimum risk'),
                               actionButton('max_return',
@@ -421,8 +423,6 @@ server <- function(input, output, session) {
       port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
     }
     
-    print(port_dollar)
-    
     
     if (input$snp500){
       snp <- getSymbols('SPY',
@@ -457,9 +457,10 @@ server <- function(input, output, session) {
                                  to = Sys.Date(),
                                  auto.assign = F))[,6] 
       
-      ## error is here
       data <- ROC(data)
       
+      data[,1][1] <- 0
+      data[,1] <- cumsum(data[,1])
       
       
       temp[[i]] <- assign(paste0('stock',as.character(i)), data)
@@ -474,13 +475,14 @@ server <- function(input, output, session) {
                                               from = input$slider2,
                                               to = Sys.Date(),
                                               auto.assign = F))[,6])
+      portfolio_returns[,1][1] <- 0
+      portfolio_returns[,1] <- cumsum(portfolio_returns[,1])
+        
       }
     
     else{
       portfolio_returns <- do.call('merge.xts',temp)}
     
-    
-    print(portfolio_returns)
     
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
@@ -594,11 +596,17 @@ server <- function(input, output, session) {
   #OPTIMISATION TAB
   
   #portfolio optimisation tab data
-  # CRASHES WHEN ONLY 1 STOCK TO OPTIMISE 
   optimised_port <- reactiveValues(df_data = NULL)
   
   
   observeEvent(input$min_risk, {
+    
+    temp <- portfolio$data 
+    
+    if (length(temp$ticker) == 1 )
+      return()
+    
+    
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     
@@ -634,6 +642,12 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$max_return, {
+    
+    temp <- portfolio$data 
+    
+    if (length(temp$ticker) == 1 )
+      return()
+    
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     
