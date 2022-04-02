@@ -76,7 +76,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                  
                  
                  
-                 
+                 #--------------------------------------------------------------------
                  tabPanel(title = 'Portfolio',
                           headerPanel(title = 'Portfolio management'),
                           
@@ -137,17 +137,18 @@ ui <- navbarPage(title = 'Portfolio manager',
                  
                  
                  
-                 
+                 #--------------------------------------------------------------------
                  tabPanel(title = 'World distribution'),
                  
                  
                  
-                 
+                 #--------------------------------------------------------------------
                  tabPanel(title = 'Sector peformace',
                           headerPanel(title = 'Portfolio optimizer'),
                           sidebarLayout(
                             sidebarPanel(
-                              helpText('TEMP')
+                              helpText('TEMP'),
+                              plotOutput('moving_ave')
                             ),
                             
                             mainPanel(
@@ -160,7 +161,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                  
                  
                  
-                 
+                 #--------------------------------------------------------------------
                  tabPanel(title = 'Portfolio optimizer',
                           headerPanel(title = 'Portfolio optimizer'),
                           
@@ -173,7 +174,6 @@ ui <- navbarPage(title = 'Portfolio manager',
                                            label = 'Minimum risk'),
                               actionButton('max_return',
                                            label = 'Maximise return'),
-                              
                             ),
                             
                             mainPanel(
@@ -213,8 +213,8 @@ ui <- navbarPage(title = 'Portfolio manager',
 
 server <- function(input, output, session) {
   
+  #--------------------------------------------------------------------
   #INPUT TAB
-  
   #input page chart plot
   output$stock_plot <- renderDygraph({
     charting <- getSymbols(input$ticker, 
@@ -304,7 +304,7 @@ server <- function(input, output, session) {
   
   
   
-  
+  #--------------------------------------------------------------------
   #PORTFOLIO TAB
   
   #portfolio tab value and gain
@@ -547,9 +547,9 @@ server <- function(input, output, session) {
   
   
   
-  
+  #--------------------------------------------------------------------
   #sector allocation 
-  
+  #sector allocation for pie chart 
   output$sector_pie_chart <- renderPlotly({
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
@@ -588,13 +588,86 @@ server <- function(input, output, session) {
     
   })
   
+  #sector moving averages comparison 
+  output$moving_ave <- renderPlot({
+    
+    vti_total_mkt_holdings <-
+      read_csv("https://colorado.rstudio.com/rsc/vti-holdings/data.csv", 
+               col_types = cols(COUNTRY = col_skip(),
+                                `SECURITY DEPOSITORY RECEIPT TYPE` = col_skip(),
+                                SEDOL = col_skip(), X1 = col_skip())) %>%
+      janitor::clean_names()
+    
+    vti_prices_1_1500 <- vti_total_mkt_holdings %>%
+      # BRK's ticker is in the wrong format. We can manipulate the string before passing to tiingo.
+      mutate(ticker = str_replace(ticker, "BRK.B", "BRK-B")) %>%
+      slice(1:200) %>%
+      pull(ticker) %>%
+      tq_get(start_date = start, end_date = end)
+    
+    names(vti_prices_1_1500)[names(vti_prices_1_1500) == 'symbol'] <- 'ticker'
+    
+    #-----------------------
+    
+    chart <- vti_prices_1_1500 %>% 
+      select(ticker, date, close) %>% 
+      left_join(exchange_tickers_sectors %>% select(ticker, sector)) %>%  
+      group_by(ticker) %>% 
+      mutate(sma_50 = roll_mean(as.matrix(close), 50, complete_obs = T),
+             sma_200 = roll_mean(as.matrix(close), 200, complete_obs = T),
+             sma_50_greater_than_sma_200 = case_when(sma_50 > sma_200 ~ 1, 
+                                                     TRUE ~ 0)) %>%
+      na.omit() %>% 
+      filter(date == max(date)) %>% 
+      group_by(sector) %>% 
+      count(sma_50_greater_than_sma_200) %>%  
+      mutate(percent = n/sum(n), 
+             trend = case_when(sma_50_greater_than_sma_200 == 1 ~ "sma50 above sma200", 
+                               TRUE ~ "sma50 below sma200"),
+             percent_label = scales::percent(percent)) %>% 
+      group_by(trend) %>% 
+      # remove cash and misc sector
+      filter(!(str_detect(sector, 'cash|Cash|Miscellaneous'))) %>% 
+      filter(sma_50_greater_than_sma_200 == 1 ) %>%
+      mutate(ordering = rank(percent, ties.method = "random"),
+             percent_label = scales::percent(round(percent, 2))) %>%
+      
+      ggplot(aes(ordering, group = sector, color = sector,fill = sector)) +
+      geom_tile(aes(y = percent/2, 
+                    height = percent ,
+                    width = .9), alpha = 0.9) +
+      # text on top of bars
+      geom_text(aes(y = percent, label =  sector ), hjust = -0.1) +
+      geom_text(aes(y = percent, label =  percent_label ), color = "white", hjust = 1.2) +
+      # text in x-axis (requires clip = "off" in coord_cartesian)
+      coord_flip(clip = "off", expand = T)   +
+      scale_y_continuous(labels=scales::percent) +
+      expand_limits(y = c(.1, 1.2)) +
+      scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+      guides(color=F,fill=F) +
+      labs(x = "", y = "", title = "Percentage tickers sma 50 above sma 200", 
+           subtitle = paste("as of", today()),
+           caption = "source: tiingo, Vanguard, author calcs") +
+      theme_bw() +
+      theme(axis.text.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            plot.title = element_text(hjust = .5),
+            plot.subtitle = element_text(hjust = .5),
+            panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank())
+    
+    
+    chart
+  })
   
   
   
   
   
-  
-  
+  #--------------------------------------------------------------------
   #OPTIMISATION TAB
   
   #portfolio optimisation tab data
