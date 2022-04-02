@@ -95,9 +95,11 @@ ui <- navbarPage(title = 'Portfolio manager',
                               
                               checkboxInput('snp500',
                                             label = 'Add S&P 500 as benchmark'),
+                              checkboxInput('portfolio_only',
+                                            label = 'Only show portfolio line'),
                               
                               
-                              helpText('Portfolio Value'),
+                              h4('Portfolio Value'),
                               textOutput('portfolio_value'),
                               htmlOutput('profit_loss_1'),
                               
@@ -405,9 +407,22 @@ server <- function(input, output, session) {
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
     
-    port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
     
-    port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+    
+    
+    if (input$portfolio_only){
+      port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
+      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- port_dollar[,dim(port_dollar)[2]]
+    }
+    
+    else{
+      port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
+      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+    }
+    
+    print(port_dollar)
+    
     
     if (input$snp500){
       snp <- getSymbols('SPY',
@@ -442,41 +457,60 @@ server <- function(input, output, session) {
                                  to = Sys.Date(),
                                  auto.assign = F))[,6] 
       
-      print(data[,1])
       ## error is here
-      data$change <- c(-diff(data[,1])/data[,1][-1] *  100, NA)
+      data <- ROC(data)
       
-      print(data)
+      
       
       temp[[i]] <- assign(paste0('stock',as.character(i)), data)
     }
     
-    print(temp)
+    
     
     if(length(ticker_name)==1){
-      portfolio_returns <- na.omit(getSymbols(ticker_name[1],
+      
+      portfolio_returns <- ROC(na.omit(getSymbols(ticker_name[1],
                                               #change to slider 
                                               from = input$slider2,
                                               to = Sys.Date(),
-                                              auto.assign = F))[,6]}
+                                              auto.assign = F))[,6])
+      }
     
     else{
       portfolio_returns <- do.call('merge.xts',temp)}
     
     
+    print(portfolio_returns)
+    
+    start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
+      transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
+    
+    
+    
+    if (input$portfolio_only){
+      port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
+      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- port_dollar[,dim(port_dollar)[2]]
+    }
+    
+    else{
+      port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
+      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+    }
+    
+    
+    
     if (input$snp500){
-      snp <- getSymbols('SPY',
+      snp <- ROC(getSymbols('SPY',
                         from = input$slider2,
                         to = Sys.Date(),
-                        auto.assign = F) [,6]
+                        auto.assign = F) [,6])
       
-      port_dollar <- merge.xts(portfolio_returns, snp)
+      port_dollar <- merge.xts(port_dollar, snp)
     }
     
     else 
-      port_dollar <- portfolio_returns 
-    
-    print(port_dollar)
+      port_dollar <- port_dollar
     
     
     dygraph(port_dollar)
