@@ -122,7 +122,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                 tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
                                 tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart'))
                               ),
-                              
+                              h3('My portfolio'),
                               DT::dataTableOutput('Stock_peformance')
                               
                               
@@ -489,12 +489,12 @@ server <- function(input, output, session) {
     
     temp <- portfolio$data 
     
-    out <- temp %>% transmute(Symbol = ticker,
-                              Qantity = quantity,
-                              Position = round(quantity * purchase_price,2),
-                              Last_price = round(last_price,2),
-                              Cost = round(purchase_price,2),
-                              Unrealised_gains = round(last_price - purchase_price,2),
+    out <- temp %>% transmute('Symbol' = ticker,
+                              'Qantity' = quantity,
+                              'Position' = round(quantity * purchase_price,2),
+                              'Last price' = round(last_price,2),
+                              'Cost' = round(purchase_price,2),
+                              'Unrealised gains' = round(last_price - purchase_price,2),
                               'Unrealised P&L' = paste0(as.character(round((last_price - purchase_price)/last_price * 100,2)),'%')
                               )
     
