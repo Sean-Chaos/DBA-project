@@ -323,6 +323,7 @@ server <- function(input, output, session) {
     
   })
   
+  
   #portfolio tab gain 
   output$profit_loss_1 <- renderText({
     
@@ -351,6 +352,7 @@ server <- function(input, output, session) {
     
     return(out)
   })
+  
   
   #portfolio tab tree chart 
   output$tree_map_portfolio_allocation <- renderPlot({
@@ -447,6 +449,7 @@ server <- function(input, output, session) {
     
   })
   
+  
   #portfolio tab stock returns chart
   output$portfolio_returns_chart <- renderDygraph({
     
@@ -528,6 +531,7 @@ server <- function(input, output, session) {
     
   })
   
+  
   #portfolio tab profit loss table 
   output$Stock_peformance <- renderDataTable({
     
@@ -600,6 +604,7 @@ server <- function(input, output, session) {
     
     
   })
+  
   
   #sector moving averages comparison 
   #this takes incredibly LONG LIKE WTF
@@ -690,6 +695,7 @@ server <- function(input, output, session) {
     })
   })
   
+  
   output$sector_allocation_table <- renderDataTable({
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
@@ -765,6 +771,7 @@ server <- function(input, output, session) {
     optimised_port$data <- min_var_portfolio
     
   })
+  
   
   observeEvent(input$max_return, {
     
