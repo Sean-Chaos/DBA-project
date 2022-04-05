@@ -297,7 +297,14 @@ server <- function(input, output, session) {
   
   
   #KEEP BUT MAKE IT LOOK BETTER
-  output$df_data_out <- renderDataTable(portfolio$data)
+  output$df_data_out <- renderDataTable({
+    
+    temp <- portfolio$data %>% mutate(last_price = round(last_price, digits = 2),
+                                      purchase_price = round(purchase_price, digits = 2))
+    
+    return(temp)
+    
+    })
   
   
   
@@ -697,6 +704,11 @@ server <- function(input, output, session) {
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
     
+    stock.sector.num <- stock.sector.num %>% mutate(Sector = sector, 
+                                                    'No. of stocks' = Num.diff.stocks,
+                                                    'Asset value' = Total.asset,
+                                                    Weight = paste0(as.character(round(Total.asset/sum(Total.asset) * 100, digits = 2)), '%'))
+    
     return(stock.sector.num)
     
   })
@@ -805,13 +817,6 @@ server <- function(input, output, session) {
     df <- data.frame(ticker = list_of_tickers,
                      allocation = as.vector(temp$weights))
     
-    print(df)
-    
-    #pie <- ggplot(allocation, aes(x='', y=allocation, fill=ticker)) + 
-      #geom_bar(stat = 'identity', width = 1) +
-      #coord_polar('y', start = 0) +
-      #theme_void()
-    
     
     pie <- plot_ly(df, labels = ~ticker, values = ~allocation, type = 'pie',
                     textposition = 'inside',
@@ -828,16 +833,6 @@ server <- function(input, output, session) {
     pie
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     return(pie)
     
   })
@@ -849,14 +844,41 @@ server <- function(input, output, session) {
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     temp <- optimised_port$data
     
-    allocation <- data.frame(ticker = list_of_tickers,
+    temp1 <- data.frame(ticker = list_of_tickers,
                              allocation = as.vector(temp$weights)) %>% 
       mutate(allocation = round(allocation, digits = 4)) %>%
       mutate(allocation = allocation * 100) %>%
       mutate(allocation = as.character(allocation)) %>% 
       mutate(allocation = paste0(allocation, '%'))
     
-    allocation
+    # need to calculate how many shares to buy now 
+    
+    in_data <- portfolio$data 
+    
+    
+    df <- left_join(data.frame(ticker = list_of_tickers,
+                               allocation = as.vector(temp$weights)), 
+                    in_data, 
+                    by= c('ticker'='ticker')) %>%
+      
+      mutate(current_asset = last_price * quantity,
+             new = sum(current_asset)*allocation/last_price,
+             change = new - quantity
+             )
+    
+    print(df)
+    
+    out <- data.frame(Ticker = temp1$ticker,
+                      Position = in_data$quantity,
+                      Allocation = temp1$allocation,
+                      Optimised_weight = round(df$new, digits = 2),
+                      shares_to_buy_or_sell = round(df$change, digits =2)
+                      )
+    
+    
+    out <- out %>% datatable() %>%
+      formatStyle(c('shares_to_buy_or_sell'),
+                color = styleInterval(cuts = 0, values = c("red", "green")))
     
   })
   
