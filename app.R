@@ -75,8 +75,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                  
                  
                  
-                 
-                 
+                 #--------------------------------------------------------------------
+                 # PORTFOLIO TAB
                  #--------------------------------------------------------------------
                  tabPanel(title = 'Portfolio',
                           headerPanel(title = 'Portfolio management'),
@@ -126,13 +126,14 @@ ui <- navbarPage(title = 'Portfolio manager',
                           )
                  ),
                  
-                 
-                 
+                 #--------------------------------------------------------------------
+                 # WORLD DISTRIBUTION TAB
                  #--------------------------------------------------------------------
                  tabPanel(title = 'World distribution'),
                  
                  
-                 
+                 #--------------------------------------------------------------------
+                 # SECTOR PEFORMACE TAB
                  #--------------------------------------------------------------------
                  tabPanel(title = 'Sector peformace',
                           headerPanel(title = 'Portfolio optimizer'),
@@ -145,14 +146,16 @@ ui <- navbarPage(title = 'Portfolio manager',
                             #--------------------------------------------------------------------
                             mainPanel(
                               helpText('TEMP'),
-                              plotlyOutput('sector_pie_chart')
+                              plotlyOutput('sector_pie_chart'),
+                              DT::dataTableOutput('sector_allocation_table')
                             )
                           ),
                           ),
                  
                  
                  
-                 
+                 #--------------------------------------------------------------------
+                 # pORTFOLIO OPTIMISER TAB
                  #--------------------------------------------------------------------
                  tabPanel(title = 'Portfolio optimizer',
                           headerPanel(title = 'Portfolio optimizer'),
@@ -530,7 +533,12 @@ server <- function(input, output, session) {
                               'Cost' = round(purchase_price,2),
                               'Unrealised gains' = round(last_price - purchase_price,2),
                               'Unrealised P&L' = paste0(as.character(round((last_price - purchase_price)/last_price * 100,2)),'%')
-                              )
+                              ) %>% 
+      datatable() %>% 
+      formatStyle(c('Unrealised gains','Unrealised P&L'),
+                  valueColumns = 'Unrealised gains',
+                  color = styleInterval(cuts = 0, values = c("red", "green")))
+      
     
     return(out)
     
@@ -563,8 +571,6 @@ server <- function(input, output, session) {
     stock.sector.num <- stock.sector %>% group_by(sector) %>%
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
-    
-    print(stock.sector.num)
     
     #pie chart
     
@@ -607,7 +613,7 @@ server <- function(input, output, session) {
       
       vti_prices_1_1500 <- vti_total_mkt_holdings %>%
         mutate(ticker = str_replace(ticker, "BRK.B", "BRK-B")) %>%
-        slice(1:200) %>%
+        slice(1:100) %>%
         pull(ticker) %>%
         tq_get(start_date = start, end_date = end)
       
@@ -667,7 +673,7 @@ server <- function(input, output, session) {
               plot.subtitle = element_text(hjust = .5),
               panel.grid.major = element_blank(), 
               panel.grid.minor = element_blank(),
-              panel.background = element_blank())
+              panel.background = element_blank()) 
       
       incProgress(.2, detail = 'Finishing')
       chart
@@ -677,6 +683,23 @@ server <- function(input, output, session) {
     })
   })
   
+  output$sector_allocation_table <- renderDataTable({
+    
+    exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
+    
+    stocks <- portfolio$data 
+    stocks <- stocks %>% mutate(Total = quantity * last_price)
+    print(stocks)
+    
+    stock.sector <- inner_join(exchange_tickers_sectors, stocks, by= "ticker")
+    
+    stock.sector.num <- stock.sector %>% group_by(sector) %>%
+      summarize(Num.diff.stocks = n(),
+                Total.asset = round(sum(Total),2))
+    
+    return(stock.sector.num)
+    
+  })
   
   
   
