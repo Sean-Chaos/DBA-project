@@ -106,6 +106,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                               h4('Portfolio Value'),
                               h5(textOutput('portfolio_value')),
                               h6(htmlOutput('profit_loss_1')),
+                              h6(textOutput('portfolio_mean')),
+                              h6(textOutput('portfolio_sd')),
                               
                               h5('Portfolio allocation'),
                               
@@ -118,7 +120,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                               tabsetPanel(
                                 type = 'tabs',
                                 tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
-                                tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart'))
+                                tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart')),
+                                tabPanel('Risk distribution', plotOutput('risk_dist'))
                               ),
                               h3('My portfolio'),
                               div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 75%; width: 75%")
@@ -176,8 +179,9 @@ ui <- navbarPage(title = 'Portfolio manager',
                               actionButton('max_return',
                                            label = 'Maximise return'),
                               h4('Portfolio variance'),
-                              h5(textOutput('port_var')),
-                              h5(textOutput('port_returns'))
+                              h6(textOutput('opti_portfolio_mean')),
+                              h6(textOutput('opti_portfolio_sd'))
+                              
                             ),
                             
                             #--------------------------------------------------------------------
@@ -185,7 +189,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                               tabsetPanel(
                                 tabPanel('Asset allocation', plotlyOutput('piechart1')),
                                 tabPanel('Efficient frontier', plotOutput('eff_front')),
-                                tabPanel('Risk distribution', plotlyOutput('risk_dist'))
+                                tabPanel('Optimised risk', plotOutput('opti_risk'))
+                                
                               ),
                               div(DT::dataTableOutput("table1"), style = "font-size: 75%; width: 75%")
                               
@@ -569,11 +574,64 @@ server <- function(input, output, session) {
   })
   
   
+  #portfolio tab risk distribution
+  port_mean <- reactiveValues(df_data = NULL)
+  port_sd <- reactiveValues(df_data = NULL)
   
+  output$risk_dist <- renderPlot({
+    
+    # data 
+    tickers <-  portfolio$data[,1] %>% as.vector()
+    
+    wts <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
+      transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
+    
+    #processing
+    price_data <- tq_get(tickers,
+                         from = Sys.Date()-720,
+                         to = Sys.Date(),
+                         get = 'stock.prices')
+    
+    ret_data <- price_data %>%
+      group_by(symbol) %>%
+      tq_transmute(select = adjusted,
+                   mutate_fun = periodReturn,
+                   period = "daily",
+                   col_rename = "ret") %>%
+      tq_portfolio(assets_col = symbol,
+                   returns_col = ret,
+                   weights = wts,
+                   geometric = FALSE,
+                   col_rename = 'port_ret')
+    
+    port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
+    port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
+    
+    
+    ggplot(ret_data, aes(x = port_ret)) + 
+    geom_histogram(bins = 60) +
+    theme_light() +
+    labs(x = "Portfolio Returns",
+         y = "Frequency",
+         title = "Daily Portfolio returns")
+    
+
+  })
   
+  #portfolio tab risk tab text 
+  output$portfolio_mean <- renderText({
+    temp <- port_mean$data %>% as.numeric() %>% round(., digits = 4) %>%  as.character()  
+    
+    return(paste0('Portfolio returns: ', temp))
+  })
   
-  
-  
+  output$portfolio_sd <- renderText({
+    temp <- port_sd$data %>% as.numeric() 
+    print(temp)
+    temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
+    
+    return(paste0('Portfolio standard deviation: ', temp , '%'))
+  })
   
   
   
@@ -742,8 +800,6 @@ server <- function(input, output, session) {
   
   #--------------------------------------------------------------------
   #OPTIMISATION TAB
-  # TO DO:
-  # normal distibution to show the risk 
   #--------------------------------------------------------------------
   
   #portfolio optimisation tab data
@@ -909,60 +965,127 @@ server <- function(input, output, session) {
   })
   
   
-  
   #portfolio optimisation efficient frontier
-  # try chart.EfficientFrontier
   output$eff_front <- renderPlot({
     
-    ticker_name <- portfolio$data[,1] %>% as.vector()
-    
-    temp <- list()
-    
-    for (i in 1:length(ticker_name)){
-      temp[[i]] <- assign(paste0('stock',as.character(i)), 
-                          na.omit(getSymbols(ticker_name[i], 
-                                             #change to slider 
-                                             from = Sys.Date()-360,
-                                             to = Sys.Date(),
-                                             auto.assign = F
-                          ))[,6]
-      )
+    annualized.moments <- function(R, scale=12, portfolio=NULL){
+      out <- list()
+      out$mu <-    matrix(colMeans(R), ncol=1)
+      out$sigma <- cov(R)/scale
+      return(out)
     }
     
-    if(length(ticker_name)==1){
-      portfolio_returns <- na.omit(getSymbols(ticker_name[1],
-                                              #change to slider 
-                                              from = Sys.Date()-360,
-                                              to = Sys.Date(),
-                                              auto.assign = F))[,6]}
     
-    else{
-      portfolio_returns <- do.call('merge.xts',temp)}
+    temp <- portfolio$data 
+    
+    if (length(temp$ticker) == 1 )
+      return()
     
     
-    frontier <- portfolioFrontier(as.timeSeries(portfolio_returns),spec = portfolioSpec(), constraints = "LongOnly")
-    print(frontier)
+    list_of_tickers <- portfolio$data[,1] %>% as.vector()
     
-    frontierPlot(frontier)
+    stock_returns <- tq_get(list_of_tickers,
+                            from = Sys.Date()-180,
+                            to = Sys.Date(),
+                            get = 'stock.prices') %>%
+      select(symbol, date, adjusted) %>%
+      spread(symbol, value = adjusted) %>% tk_xts()
+    
+    
+    
+    prt_ef <- PortfolioAnalytics::portfolio.spec(assets = colnames(stock_returns)) %>%
+      
+      PortfolioAnalytics::add.constraint( portfolio = . ,
+                                            type = 'long_only') %>% 
+      PortfolioAnalytics::add.constraint(portfolio = .,
+                                         type = "leverage") %>%
+      PortfolioAnalytics::add.objective(portfolio = .,
+                                        type = 'risk', name = 'StdDev') %>%
+      PortfolioAnalytics:: create.EfficientFrontier(R=12*stock_returns, 
+                                                    portfolio=. ,
+                                                    type="mean-StdDev",
+                                                    match.col = "StdDev",
+                                                    momentFUN=annualized.moments,
+                                                    scale=12)
+      
+    
+    print(prt_ef)
+    
+    
+    
+    xlim <- range(prt_ef$frontier[,2])*c(1, 1.5)
+    ylim <- range(prt_ef$frontier[,1])*c(.80, 1.05)
+    
+    
+    chart.EfficientFrontier(prt_ef, match.col="StdDev", chart.assets = FALSE, 
+                            labels.assets = FALSE, xlim=xlim, ylim=ylim )
+    
+    points(with(annualized.moments(12*stock_returns, scale=12), cbind(sqrt(diag(sigma)), mu)), pch=19 ) 
+    
+    text(with(annualized.moments(12*stock_returns, scale=12), cbind(sqrt(diag(sigma)), mu)), 
+         labels=colnames(stock_returns), cex=.8, pos=4) 
+    
+    chart.EfficientFrontier(prt_ef, match.col="StdDev")
     
     
     
   })
   
   
-  output$port_var <- renderText({
-    temp <- optimised_port$data
-    temp$objective_measures
+  #optimised risk graph
+  opti_port_mean <- reactiveValues(df_data = NULL)
+  opti_port_sd <- reactiveValues(df_data = NULL)
+  
+  output$opti_risk <- renderPlot({
+    
+    # data 
+    tickers <-  portfolio$data[,1] %>% as.vector()
+    
+    wts <- as.vector(temp$weights)
+    
+    #processing
+    price_data <- tq_get(tickers,
+                         from = Sys.Date()-720,
+                         to = Sys.Date(),
+                         get = 'stock.prices')
+    
+    ret_data <- price_data %>%
+      group_by(symbol) %>%
+      tq_transmute(select = adjusted,
+                   mutate_fun = periodReturn,
+                   period = "daily",
+                   col_rename = "ret") %>%
+      tq_portfolio(assets_col = symbol,
+                   returns_col = ret,
+                   weights = wts,
+                   geometric = FALSE,
+                   col_rename = 'port_ret')
+    
+    opti_port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
+    opti_port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
+    
+    ggplot(ret_data, aes(x = port_ret)) + 
+      geom_histogram(bins = 60) +
+      theme_light() +
+      labs(x = "Proposed Portfolio Returns",
+           y = "Frequency",
+           title = "Proposed Daily Portfolio returns")
+    
   })
   
-  output$port_returns <- renderText({
-    temp <- optimised_port$data
-    temp$R
+  #portfolio tab risk tab text 
+  output$opti_portfolio_mean <- renderText({
+    temp <- opti_port_mean$data %>% as.numeric() %>% round(., digits = 4) %>%  as.character()  
+    
+    return(paste0('Portfolio returns: ', temp))
   })
   
-  
-  
-  
+  output$opti_portfolio_sd <- renderText({
+    temp <- opti_port_sd$data %>% as.numeric() 
+    temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
+    
+    return(paste0('Portfolio standard deviation: ', temp , '%'))
+  })
   
   
   
