@@ -1009,11 +1009,6 @@ server <- function(input, output, session) {
                                                     match.col = "StdDev",
                                                     momentFUN=annualized.moments,
                                                     scale=12)
-      
-    
-    print(prt_ef)
-    
-    
     
     xlim <- range(prt_ef$frontier[,2])*c(1, 1.5)
     ylim <- range(prt_ef$frontier[,1])*c(.80, 1.05)
@@ -1043,6 +1038,7 @@ server <- function(input, output, session) {
     # data 
     tickers <-  portfolio$data[,1] %>% as.vector()
     
+    temp <- optimised_port$data
     wts <- as.vector(temp$weights)
     
     #processing
