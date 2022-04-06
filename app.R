@@ -175,6 +175,9 @@ ui <- navbarPage(title = 'Portfolio manager',
                                            label = 'Minimum risk'),
                               actionButton('max_return',
                                            label = 'Maximise return'),
+                              h4('Portfolio variance'),
+                              h5(textOutput('port_var')),
+                              h5(textOutput('port_returns'))
                             ),
                             
                             #--------------------------------------------------------------------
@@ -740,7 +743,6 @@ server <- function(input, output, session) {
   #--------------------------------------------------------------------
   #OPTIMISATION TAB
   # TO DO:
-  # efficient frontier 
   # normal distibution to show the risk 
   #--------------------------------------------------------------------
   
@@ -909,6 +911,7 @@ server <- function(input, output, session) {
   
   
   #portfolio optimisation efficient frontier
+  # try chart.EfficientFrontier
   output$eff_front <- renderPlot({
     
     ticker_name <- portfolio$data[,1] %>% as.vector()
@@ -940,19 +943,22 @@ server <- function(input, output, session) {
     frontier <- portfolioFrontier(as.timeSeries(portfolio_returns),spec = portfolioSpec(), constraints = "LongOnly")
     print(frontier)
     
-    
-    plot(frontier)
-    
-    
-    
-    
+    frontierPlot(frontier)
     
     
     
   })
   
   
+  output$port_var <- renderText({
+    temp <- optimised_port$data
+    temp$objective_measures
+  })
   
+  output$port_returns <- renderText({
+    temp <- optimised_port$data
+    temp$R
+  })
   
   
   
