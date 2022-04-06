@@ -571,23 +571,25 @@ server <- function(input, output, session) {
   #--------------------------------------------------------------------
   
   #sector allocation for pie chart 
-  # VALUE IS NULL WHEN STOCK IS UNKNOWN. CHANGE TO UNKNOWN
   output$sector_pie_chart <- renderPlotly({
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
     
     stocks <- portfolio$data 
     stocks <- stocks %>% mutate(Total = quantity * last_price)
-    print(stocks)
+
+    stock.sector <- left_join(stocks, exchange_tickers_sectors, by= c("ticker"='ticker'))
     
-    stock.sector <- inner_join(exchange_tickers_sectors, stocks, by= "ticker")
+    stock.sector[is.na(stock.sector$sector),'sector'] <- 'Other/ETF'
+    
+    print(stock.sector)
     
     stock.sector.num <- stock.sector %>% group_by(sector) %>%
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
     
-    #pie chart
     
+    #pie chart
     fig2 <- plot_ly(stock.sector.num, labels = ~sector, values = ~Total.asset, type = 'pie',
                     textposition = 'inside',
                     textinfo = 'label+percent',
@@ -610,7 +612,7 @@ server <- function(input, output, session) {
   
   
   #sector moving averages comparison 
-  #this takes incredibly LONG LIKE WTF
+  #this takes incredibly LONG 
   output$moving_ave <- renderPlot({
     
     withProgress(message = 'Making Plot', value = 0, {
@@ -707,9 +709,9 @@ server <- function(input, output, session) {
     
     stocks <- portfolio$data 
     stocks <- stocks %>% mutate(Total = quantity * last_price)
-    print(stocks)
-    
-    stock.sector <- inner_join(exchange_tickers_sectors, stocks, by= "ticker")
+
+    stock.sector <- left_join(stocks, exchange_tickers_sectors, by= c("ticker"='ticker'))
+    stock.sector[is.na(stock.sector$sector),'sector'] <- 'Other/ETF'
     
     stock.sector.num <- stock.sector %>% group_by(sector) %>%
       summarize(Num.diff.stocks = n(),
