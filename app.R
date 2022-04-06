@@ -569,6 +569,7 @@ server <- function(input, output, session) {
   #--------------------------------------------------------------------
   
   #sector allocation for pie chart 
+  # VALUE IS NULL WHEN STOCK IS UNKNOWN. CHANGE TO UNKNOWN
   output$sector_pie_chart <- renderPlotly({
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
