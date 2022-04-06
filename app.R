@@ -236,7 +236,8 @@ server <- function(input, output, session) {
                            from = input$slider1,
                            to = Sys.Date(),
                            auto.assign = F)[,6]
-    dygraph(charting)
+    dygraph(charting,
+            main = "Input")
     
   })
   
@@ -462,7 +463,8 @@ server <- function(input, output, session) {
       port_dollar <- port_dollar 
     
     
-    dygraph(port_dollar)
+    dygraph(port_dollar,
+            main = "Portfolio Value")
     
   })
   
@@ -543,7 +545,8 @@ server <- function(input, output, session) {
       port_dollar <- port_dollar
     
     
-    dygraph(port_dollar)
+    dygraph(port_dollar,
+            main = "Portfolio Returns")
     
     
   })
@@ -619,14 +622,14 @@ server <- function(input, output, session) {
   
   #portfolio tab risk tab text 
   output$portfolio_mean <- renderText({
-    temp <- port_mean$data %>% as.numeric() %>% round(., digits = 4) %>%  as.character()  
+    temp <- port_mean$data %>% as.numeric() 
+    temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
-    return(paste0('Portfolio returns: ', temp))
+    return(paste0('Portfolio returns: ', temp, '%'))
   })
   
   output$portfolio_sd <- renderText({
     temp <- port_sd$data %>% as.numeric() 
-    print(temp)
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
     
     return(paste0('Portfolio standard deviation: ', temp , '%'))
@@ -1074,9 +1077,10 @@ server <- function(input, output, session) {
   
   #portfolio tab risk tab text 
   output$opti_portfolio_mean <- renderText({
-    temp <- opti_port_mean$data %>% as.numeric() %>% round(., digits = 4) %>%  as.character()  
+    temp <- opti_port_mean$data %>% as.numeric() 
+    temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
-    return(paste0('Portfolio returns: ', temp))
+    return(paste0('Portfolio returns: ', temp, '%'))
   })
   
   output$opti_portfolio_sd <- renderText({
