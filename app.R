@@ -20,8 +20,7 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
-library(fPortfolio)
-library(PerformanceAnalytics)
+
 
 
 
