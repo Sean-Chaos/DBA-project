@@ -615,6 +615,8 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Making Plot', value = 0, {
       
+      exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
+      
       incProgress(0, detail = 'Retreiving data')
       
       vti_total_mkt_holdings <-
