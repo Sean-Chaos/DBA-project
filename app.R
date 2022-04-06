@@ -715,10 +715,10 @@ server <- function(input, output, session) {
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
     
-    stock.sector.num <- stock.sector.num %>% mutate(Sector = sector, 
-                                                    'No. of stocks' = Num.diff.stocks,
-                                                    'Asset value' = Total.asset,
-                                                    Weight = paste0(as.character(round(Total.asset/sum(Total.asset) * 100, digits = 2)), '%'))
+    stock.sector.num <- stock.sector.num %>% transmute(Sector = sector, 
+                                                      Stocks = Num.diff.stocks,
+                                                      Asset_value = Total.asset,
+                                                      Weight = paste0(as.character(round(Total.asset/sum(Total.asset) * 100, digits = 2)), '%'))
     
     return(stock.sector.num)
     
