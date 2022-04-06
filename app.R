@@ -66,7 +66,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                             mainPanel(
                               dygraphOutput('stock_plot'),
                               
-                              DT::dataTableOutput('df_data_out')
+                              div(DT::dataTableOutput("df_data_out"), style = "font-size: 75%; width: 75%")
+                              
                             )
                           )
                  ),
@@ -116,7 +117,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                 tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart'))
                               ),
                               h3('My portfolio'),
-                              DT::dataTableOutput('Stock_peformance')
+                              div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 75%; width: 75%")
                               
                               
                             )
@@ -147,7 +148,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                             mainPanel(
                               helpText('TEMP'),
                               plotlyOutput('sector_pie_chart'),
-                              DT::dataTableOutput('sector_allocation_table')
+                              div(DT::dataTableOutput("sector_allocation_table"), style = "font-size: 75%; width: 75%")
+                              
                             )
                           ),
                           ),
@@ -174,7 +176,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                             #--------------------------------------------------------------------
                             mainPanel(
                               plotlyOutput('piechart1'),
-                              DT::dataTableOutput('table1'),
+                              div(DT::dataTableOutput("table1"), style = "font-size: 75%; width: 75%")
                               
                             ),
                             
