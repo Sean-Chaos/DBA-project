@@ -20,8 +20,7 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
-library(fPortfolio)
-library(PerformanceAnalytics)
+
 
 
 
@@ -178,7 +177,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                            label = 'Minimum risk'),
                               actionButton('max_return',
                                            label = 'Maximise return'),
-                              h4('Portfolio variance'),
+                              h4('Proposed Portfolio'),
                               h6(textOutput('opti_portfolio_mean')),
                               h6(textOutput('opti_portfolio_sd'))
                               
