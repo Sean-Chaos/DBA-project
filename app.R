@@ -20,6 +20,10 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
+library(fPortfolio)
+library(PerformanceAnalytics)
+
+
 
 
 ui <- navbarPage(title = 'Portfolio manager',
@@ -175,7 +179,11 @@ ui <- navbarPage(title = 'Portfolio manager',
                             
                             #--------------------------------------------------------------------
                             mainPanel(
-                              plotlyOutput('piechart1'),
+                              tabsetPanel(
+                                tabPanel('Asset allocation', plotlyOutput('piechart1')),
+                                tabPanel('Efficient frontier', plotOutput('eff_front')),
+                                tabPanel('Risk distribution', plotlyOutput('risk_dist'))
+                              ),
                               div(DT::dataTableOutput("table1"), style = "font-size: 75%; width: 75%")
                               
                             ),
@@ -731,6 +739,9 @@ server <- function(input, output, session) {
   
   #--------------------------------------------------------------------
   #OPTIMISATION TAB
+  # TO DO:
+  # efficient frontier 
+  # normal distibution to show the risk 
   #--------------------------------------------------------------------
   
   #portfolio optimisation tab data
@@ -844,8 +855,6 @@ server <- function(input, output, session) {
                             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
     
-    pie
-    
     
     return(pie)
     
@@ -880,8 +889,7 @@ server <- function(input, output, session) {
              change = new - quantity
              )
     
-    print(df)
-    
+
     out <- data.frame(Ticker = temp1$ticker,
                       Position = in_data$quantity,
                       Allocation = temp1$allocation,
@@ -894,8 +902,54 @@ server <- function(input, output, session) {
       formatStyle(c('shares_to_buy_or_sell'),
                 color = styleInterval(cuts = 0, values = c("red", "green")))
     
+    return(out)
+    
   })
   
+  
+  
+  #portfolio optimisation efficient frontier
+  output$eff_front <- renderPlot({
+    
+    ticker_name <- portfolio$data[,1] %>% as.vector()
+    
+    temp <- list()
+    
+    for (i in 1:length(ticker_name)){
+      temp[[i]] <- assign(paste0('stock',as.character(i)), 
+                          na.omit(getSymbols(ticker_name[i], 
+                                             #change to slider 
+                                             from = Sys.Date()-360,
+                                             to = Sys.Date(),
+                                             auto.assign = F
+                          ))[,6]
+      )
+    }
+    
+    if(length(ticker_name)==1){
+      portfolio_returns <- na.omit(getSymbols(ticker_name[1],
+                                              #change to slider 
+                                              from = Sys.Date()-360,
+                                              to = Sys.Date(),
+                                              auto.assign = F))[,6]}
+    
+    else{
+      portfolio_returns <- do.call('merge.xts',temp)}
+    
+    
+    frontier <- portfolioFrontier(as.timeSeries(portfolio_returns),spec = portfolioSpec(), constraints = "LongOnly")
+    print(frontier)
+    
+    
+    plot(frontier)
+    
+    
+    
+    
+    
+    
+    
+  })
   
   
   
