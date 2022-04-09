@@ -265,8 +265,14 @@ server <- function(input, output, session) {
   
   observeEvent(input$add_portfolio , {
     
-    if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F) 
-      {return()}
+    if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F){
+      return()
+    }
+    
+    if (input$quantity == 0){
+      return()
+    }
+    
     
     temp <- portfolio$data
     prices <- getSymbols(input$ticker, auto.assign = F)
@@ -832,7 +838,7 @@ server <- function(input, output, session) {
     
     temp <- portfolio$data 
     
-    if (length(temp$ticker) == 1 )
+    if (length(temp$ticker) <= 1 )
       return()
     
     
@@ -875,7 +881,7 @@ server <- function(input, output, session) {
     
     temp <- portfolio$data 
     
-    if (length(temp$ticker) == 1 )
+    if (length(temp$ticker) <= 1 )
       return()
     
     
