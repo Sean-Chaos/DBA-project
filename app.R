@@ -44,7 +44,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                           label = 'Zoom slider',
                                           min = Sys.Date()- 10*365,
                                           max = Sys.Date(),
-                                          value = Sys.Date()-30,
+                                          value = Sys.Date()-365,
                                           step = 30),
                               
                               dateInput('date1',
@@ -67,7 +67,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                             
                             
                             mainPanel(
-                              dygraphOutput('stock_plot'),
+                              plotlyOutput('stock_plot'),
                               
                               div(DT::dataTableOutput("df_data_out"), style = "font-size: 75%; width: 75%")
                               
@@ -92,7 +92,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                           label = 'Zoom slider',
                                           min = Sys.Date()- 10*365,
                                           max = Sys.Date(),
-                                          value = Sys.Date()-30,
+                                          value = Sys.Date()-365,
                                           step = 30
                               ),
                               
@@ -231,13 +231,30 @@ server <- function(input, output, session) {
   #--------------------------------------------------------------------
   
   #input page chart plot
-  output$stock_plot <- renderDygraph({
+  output$stock_plot <- renderPlotly({
     charting <- getSymbols(input$ticker, 
                            from = input$slider1,
                            to = Sys.Date(),
-                           auto.assign = F)[,6]
-    dygraph(charting,
-            main = toupper(as.character(input$ticker)))
+                           auto.assign = F)
+    
+    dat <- as.data.frame(charting)
+    dat$date <- index(charting)
+    dat <- subset(dat, date >= "2016-01-01")
+    
+    names(dat) <- sub(".*\\.", "", names(dat))
+    
+    dat
+    
+    
+    fig <- plot_ly(dat, x = ~date, xend = ~date, color = ~Close > Open,
+                   colors = c("red", "forestgreen"), hoverinfo = "none") 
+    fig <- fig %>% add_segments(y = ~Low, yend = ~High, size = I(1)) 
+    fig <- fig %>% add_segments(y = ~Open, yend = ~Close, size = I(3)) 
+    fig <- fig %>% layout(showlegend = FALSE, yaxis = list(title = "Price")) 
+    fig <- fig %>% layout(yaxis = list(title = toupper(as.character(input$ticker))))
+    
+    fig
+    
     
   })
   
@@ -547,8 +564,6 @@ server <- function(input, output, session) {
     
     else 
       port_dollar <- port_dollar
-    
-    colnames(port_dollar) <- ticker_name
     
     dygraph(port_dollar,
             main = "Portfolio Returns")
