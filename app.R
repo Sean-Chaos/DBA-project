@@ -20,6 +20,7 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
+library(xts)
 
 
 
@@ -49,7 +50,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                               
                               dateInput('date1',
                                         label = 'Date purchased',
-                                        value = Sys.Date()-1),
+                                        value = Sys.Date()),
                               
                               numericInput('quantity',
                                            label = 'Quantity of stock', min = 0, value = 0 ),
@@ -278,6 +279,15 @@ server <- function(input, output, session) {
     prices <- getSymbols(input$ticker, auto.assign = F)
     
     
+    #weekend causing crashes 
+    tdy <- Sys.Date()
+    day <- weekdays(tdy)
+    
+    pur_date <- case_when(day == "Saturday" ~ tdy - 1, 
+                     day == "Sunday" ~ tdy - 2, 
+                     TRUE ~ tdy)
+    
+    
     
     if (length(portfolio$data[,'ticker'])==0){
       print('1')
@@ -286,7 +296,7 @@ server <- function(input, output, session) {
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
                                          purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6][1])
+                                         purchase_price = as.numeric(prices[pur_date,6][1])
                               )
       
     }
@@ -306,7 +316,7 @@ server <- function(input, output, session) {
                                          quantity = input$quantity,
                                          last_price = as.numeric(prices[dim(prices)[1],6]),
                                          purchase_date = input$date1,
-                                         purchase_price = as.numeric(prices[input$date1,6][1])
+                                         purchase_price = as.numeric(prices[pur_date,6][1])
                               )
       )
     }
