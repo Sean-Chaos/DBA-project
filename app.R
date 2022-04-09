@@ -20,7 +20,6 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
-library(xts)
 
 
 
@@ -478,13 +477,13 @@ server <- function(input, output, session) {
     
     if (input$portfolio_only){
       port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
-      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- cbind(portfolio_returns, Portfolio = rowSums(port_dollar))
       port_dollar <- port_dollar[,dim(port_dollar)[2]]
     }
     
     else{
       port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
-      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- cbind(portfolio_returns, Portfolio = rowSums(port_dollar))
     }
     
     
@@ -499,6 +498,8 @@ server <- function(input, output, session) {
     
     else 
       port_dollar <- port_dollar 
+    
+    names(port_dollar) <- sub("\\..*", "", names(port_dollar))
     
     dygraph(port_dollar,
             main = "Portfolio Value")
@@ -556,13 +557,13 @@ server <- function(input, output, session) {
     
     if (input$portfolio_only){
       port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
-      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- cbind(portfolio_returns, Portfolio = rowSums(port_dollar))
       port_dollar <- port_dollar[,dim(port_dollar)[2]]
     }
     
     else{
       port_dollar <- portfolio_returns * outer(rep.int(1L, nrow(portfolio_returns)),start_capital)
-      port_dollar <- cbind(portfolio_returns, portfolio = rowSums(port_dollar))
+      port_dollar <- cbind(portfolio_returns, Portfolio = rowSums(port_dollar))
     }
     
     
@@ -580,6 +581,8 @@ server <- function(input, output, session) {
     
     else 
       port_dollar <- port_dollar
+    
+    names(port_dollar) <- sub("\\..*", "", names(port_dollar))
     
     dygraph(port_dollar,
             main = "Portfolio Returns")
