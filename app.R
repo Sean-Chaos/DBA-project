@@ -118,8 +118,8 @@ ui <- navbarPage(title = 'Portfolio manager',
                             mainPanel(
                               tabsetPanel(
                                 type = 'tabs',
-                                tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
                                 tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart')),
+                                tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
                                 tabPanel('Risk distribution', plotOutput('risk_dist'))
                               ),
                               h3('My portfolio'),
@@ -237,7 +237,7 @@ server <- function(input, output, session) {
                            to = Sys.Date(),
                            auto.assign = F)[,6]
     dygraph(charting,
-            main = "Input")
+            main = toupper(as.character(input$ticker)))
     
   })
   
@@ -318,7 +318,12 @@ server <- function(input, output, session) {
   output$df_data_out <- renderDataTable({
     
     temp <- portfolio$data %>% mutate(last_price = round(last_price, digits = 2),
-                                      purchase_price = round(purchase_price, digits = 2))
+                                      purchase_price = round(purchase_price, digits = 2)) %>% 
+      transmute(Ticker = ticker,
+                Position = quantity, 
+                Last = last_price,
+                "Date Purchased" = purchase_date,
+                Cost = purchase_price)
     
     return(temp)
     
@@ -462,7 +467,6 @@ server <- function(input, output, session) {
     else 
       port_dollar <- port_dollar 
     
-    
     dygraph(port_dollar,
             main = "Portfolio Value")
     
@@ -544,6 +548,7 @@ server <- function(input, output, session) {
     else 
       port_dollar <- port_dollar
     
+    colnames(port_dollar) <- ticker_name
     
     dygraph(port_dollar,
             main = "Portfolio Returns")
@@ -955,11 +960,17 @@ server <- function(input, output, session) {
                       Allocation = temp1$allocation,
                       Optimised_weight = round(df$new, digits = 2),
                       shares_to_buy_or_sell = round(df$change, digits =2)
-                      )
+                      )  %>%  
+      
+      transmute(Ticker = Ticker,
+                Position = Position,
+                Allocation = Allocation,
+                'Optimised Weight' = Optimised_weight,
+                'Shares to Buy or Sell' = shares_to_buy_or_sell)
     
     
     out <- out %>% datatable() %>%
-      formatStyle(c('shares_to_buy_or_sell'),
+      formatStyle(c('Shares to Buy or Sell'),
                 color = styleInterval(cuts = 0, values = c("red", "green")))
     
     return(out)
