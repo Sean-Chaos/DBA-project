@@ -20,6 +20,9 @@ library(gifski)
 library(png)
 library(RColorBrewer)
 library(DT)
+library(shinyvalidate)
+
+
 
 
 
@@ -27,6 +30,7 @@ library(DT)
 
 ui <- navbarPage(title = 'Portfolio manager',
                  theme = bs_theme(version = 4, bootswatch = 'sandstone'),
+                
                  tabPanel(title = 'Stock input',
                           
                           sidebarLayout(
@@ -55,11 +59,13 @@ ui <- navbarPage(title = 'Portfolio manager',
                                            label = 'Quantity of stock', min = 0, value = 0 ),
                               
                               actionButton('add_portfolio',
-                                           label = 'Add stock to portfolio'),
+                                           label = 'Add stock to portfolio',
+                                           class = "btn-success"),
                               
                               
                               actionButton('remove_portfolio',
-                                           label = 'Remove stock from portfolio')
+                                           label = 'Remove stock from portfolio',
+                                           class = "btn-danger")
                               
                               
                               
@@ -229,6 +235,22 @@ server <- function(input, output, session) {
   #--------------------------------------------------------------------
   #INPUT TAB
   #--------------------------------------------------------------------
+  
+  iv <- InputValidator$new()
+  
+  iv$add_rule("ticker", function(value) {
+    if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F){
+      "Please input a valid symbol"
+    }
+  })
+  
+  iv$add_rule("quantity", function(value) {
+    if (value <= 0) {
+      "Quantity must be more than 1"
+    }
+  })
+  
+  iv$enable()
   
   #input page chart plot
   output$stock_plot <- renderPlotly({
@@ -654,7 +676,7 @@ server <- function(input, output, session) {
     theme_light() +
     labs(x = "Portfolio Returns",
          y = "Frequency",
-         title = "Daily Portfolio returns")
+         title = "Daily Portfolio Returns: 2 Years")
     
 
   })
@@ -1112,7 +1134,7 @@ server <- function(input, output, session) {
       theme_light() +
       labs(x = "Proposed Portfolio Returns",
            y = "Frequency",
-           title = "Proposed Daily Portfolio returns")
+           title = "Proposed Daily Portfolio Returns: 2 Years")
     
   })
   
