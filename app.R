@@ -665,8 +665,6 @@ server <- function(input, output, session) {
     
     
     
-    
-    
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
     
