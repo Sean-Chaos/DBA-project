@@ -69,6 +69,10 @@ body <- dashboardBody(
   ),
   
   tabItems(
+    
+    #--------------------------------------------------------------------
+    # INPUT TAB
+    #--------------------------------------------------------------------
     tabItem(
       tabName = 'input',
       headerPanel(title = 'Stock input'),
@@ -118,6 +122,9 @@ body <- dashboardBody(
       )
     ),
     
+    #--------------------------------------------------------------------
+    # PORTFOLIO TAB
+    #--------------------------------------------------------------------
     tabItem(
       tabName = 'portfolio',
       headerPanel(title = 'Portfolio management'),
@@ -188,15 +195,15 @@ body <- dashboardBody(
     
     
     
-    
-    
+    #--------------------------------------------------------------------
+    # SECTOR ALLOCATION
+    #--------------------------------------------------------------------
     tabItem(
       tabName = 'sector',
       headerPanel(title = 'Sector Peformace'),
       sidebarLayout(
         sidebarPanel(
           h3('Sector peformance'),
-          br(),
           h6("Percentage tickers sma 50 above sma 200",),
           plotOutput('moving_ave')
         ),
@@ -210,6 +217,10 @@ body <- dashboardBody(
       ),
     ),
     
+    
+    #--------------------------------------------------------------------
+    # PORTFOLIO OPTIMISATION
+    #--------------------------------------------------------------------
     tabItem(
       tabName = 'optimizer',
       headerPanel(title = 'Portfolio optimizer'),
