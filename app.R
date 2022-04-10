@@ -177,7 +177,6 @@ ui <- navbarPage(title = 'Portfolio manager',
                           sidebarLayout(
                             sidebarPanel(
                               h6('Please choose how you would like to optimise your portfolio'),
-                              h6('You must have input at least 2 stocks for the optimiser to work '),
                               
                               actionButton('min_risk',
                                            label = 'Minimum risk'),
@@ -236,14 +235,15 @@ server <- function(input, output, session) {
   #INPUT TAB
   #--------------------------------------------------------------------
   
+  #input page error validation 
   iv <- InputValidator$new()
-  
+  #input validataion for correct ticker
   iv$add_rule("ticker", function(value) {
     if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F){
       "Please input a valid symbol"
     }
   })
-  
+  #input validation for correct quantitiy 
   iv$add_rule("quantity", function(value) {
     if (value <= 0) {
       "Quantity must be more than 1"
@@ -251,6 +251,7 @@ server <- function(input, output, session) {
   })
   
   iv$enable()
+  
   
   #input page chart plot
   output$stock_plot <- renderPlotly({
@@ -641,6 +642,8 @@ server <- function(input, output, session) {
   port_mean <- reactiveValues(df_data = NULL)
   port_sd <- reactiveValues(df_data = NULL)
   
+  
+  #portfolio tab risk distribution tab 
   output$risk_dist <- renderPlot({
     
     # data 
@@ -681,6 +684,7 @@ server <- function(input, output, session) {
 
   })
   
+  
   #portfolio tab risk tab text 
   output$portfolio_mean <- renderText({
     temp <- port_mean$data %>% as.numeric() 
@@ -689,6 +693,8 @@ server <- function(input, output, session) {
     return(paste0('Portfolio returns: ', temp, '%'))
   })
   
+  
+  #portfolio tab standard deviation 
   output$portfolio_sd <- renderText({
     temp <- port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
@@ -835,6 +841,7 @@ server <- function(input, output, session) {
   })
   
   
+  #sector allocation table 
   output$sector_allocation_table <- renderDataTable({
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
@@ -865,16 +872,18 @@ server <- function(input, output, session) {
   #OPTIMISATION TAB
   #--------------------------------------------------------------------
   
+  
   #portfolio optimisation tab data
   optimised_port <- reactiveValues(df_data = NULL)
   
   
+  #portfolio optimisation min risk button 
   observeEvent(input$min_risk, {
     
     temp <- portfolio$data 
     
     if (length(temp$ticker) <= 1 )
-      return()
+      return(showNotification("You cannot optimise a portfolio of just 1 stock!", type = 'error'))
     
     
     
@@ -912,12 +921,13 @@ server <- function(input, output, session) {
   })
   
   
+  #portfolio optimistaion max return button
   observeEvent(input$max_return, {
     
     temp <- portfolio$data 
     
     if (length(temp$ticker) <= 1 )
-      return()
+      return(showNotification("You cannot optimise a portfolio of just 1 stock!", type = 'error'))
     
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
@@ -1096,10 +1106,12 @@ server <- function(input, output, session) {
   })
   
   
-  #optimised risk graph
+  #portfolio optimised risk graph
   opti_port_mean <- reactiveValues(df_data = NULL)
   opti_port_sd <- reactiveValues(df_data = NULL)
   
+  
+  #portfolio optimistaion risk 
   output$opti_risk <- renderPlot({
     
     # data 
@@ -1138,6 +1150,7 @@ server <- function(input, output, session) {
     
   })
   
+  
   #portfolio tab risk tab text 
   output$opti_portfolio_mean <- renderText({
     temp <- opti_port_mean$data %>% as.numeric() 
@@ -1146,6 +1159,8 @@ server <- function(input, output, session) {
     return(paste0('Portfolio returns: ', temp, '%'))
   })
   
+  
+  #portfolio optimisation risk 
   output$opti_portfolio_sd <- renderText({
     temp <- opti_port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
