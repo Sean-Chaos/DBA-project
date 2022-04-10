@@ -186,6 +186,10 @@ body <- dashboardBody(
       tabName = 'world'
     ),
     
+    
+    
+    
+    
     tabItem(
       tabName = 'sector',
       headerPanel(title = 'Sector Peformace'),
@@ -193,6 +197,7 @@ body <- dashboardBody(
         sidebarPanel(
           h3('Sector peformance'),
           br(),
+          h6("Percentage tickers sma 50 above sma 200",),
           plotOutput('moving_ave')
         ),
         
@@ -858,8 +863,7 @@ server <- function(input, output, session) {
         expand_limits(y = c(.1, 1.2)) +
         scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
         guides(color=F,fill=F) +
-        labs(x = "", y = "", title = "Percentage tickers sma 50 above sma 200", 
-             subtitle = paste("as of", today()),
+        labs(x = "", y = "",
              caption = "source: tiingo, Vanguard, author calcs") +
         theme_bw() +
         theme(axis.text.y = element_blank(),
@@ -1209,27 +1213,6 @@ server <- function(input, output, session) {
     
     return(paste0('Portfolio standard deviation: ', temp , '%'))
   })
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   
   
