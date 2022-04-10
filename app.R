@@ -301,6 +301,12 @@ server <- function(input, output, session) {
   
   #input page chart plot
   output$stock_plot <- renderPlotly({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     charting <- getSymbols(input$ticker, 
                            from = input$slider1,
                            to = Sys.Date(),
@@ -426,6 +432,11 @@ server <- function(input, output, session) {
   #Table
   output$df_data_out <- renderDataTable({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- portfolio$data %>% mutate(last_price = round(last_price, digits = 2),
                                       purchase_price = round(purchase_price, digits = 2)) %>% 
       transmute(Ticker = ticker,
@@ -447,6 +458,12 @@ server <- function(input, output, session) {
   
   #portfolio tab value and gain
   output$portfolio_value <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- portfolio$data
     
     out <- temp %>% transmute(weight = quantity * last_price) %>% sum(.$weight) %>%
@@ -459,6 +476,11 @@ server <- function(input, output, session) {
   
   #portfolio tab gain 
   output$profit_loss_1 <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     temp <- portfolio$data
     
@@ -491,6 +513,11 @@ server <- function(input, output, session) {
   #portfolio tab tree chart 
   output$tree_map_portfolio_allocation <- renderPlot({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- portfolio$data %>% mutate(investment = last_price * quantity)
     
     return(treemap(temp,
@@ -518,6 +545,11 @@ server <- function(input, output, session) {
   
   #portfolio tab stock chart
   output$portfolio_value_chart <- renderDygraph({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     # merge.xts for all stocks
     ticker_name <- portfolio$data[,1] %>% as.vector()
@@ -588,6 +620,11 @@ server <- function(input, output, session) {
   
   #portfolio tab stock returns chart
   output$portfolio_returns_chart <- renderDygraph({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     # merge.xts for all stocks
     ticker_name <- portfolio$data[,1] %>% as.vector()
@@ -674,6 +711,11 @@ server <- function(input, output, session) {
   #portfolio tab profit loss table 
   output$Stock_peformance <- renderDataTable({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- portfolio$data 
     
     out <- temp %>% transmute('Symbol' = ticker,
@@ -702,6 +744,11 @@ server <- function(input, output, session) {
   
   #portfolio tab risk distribution tab 
   output$risk_dist <- renderPlotly({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     # data 
     tickers <-  portfolio$data[,1] %>% as.vector()
@@ -743,6 +790,12 @@ server <- function(input, output, session) {
   
   #portfolio tab risk tab text 
   output$portfolio_mean <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- port_mean$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
@@ -752,6 +805,12 @@ server <- function(input, output, session) {
   
   #portfolio tab standard deviation 
   output$portfolio_sd <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
     
@@ -766,6 +825,11 @@ server <- function(input, output, session) {
   
   #sector allocation for pie chart 
   output$sector_pie_chart <- renderPlotly({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
     
@@ -808,6 +872,11 @@ server <- function(input, output, session) {
   #sector moving averages comparison 
   #this takes incredibly LONG 
   output$moving_ave <- renderPlot({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     withProgress(message = 'Making Plot', value = 0, {
       
@@ -899,6 +968,11 @@ server <- function(input, output, session) {
   #sector allocation table 
   output$sector_allocation_table <- renderDataTable({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     exchange_tickers_sectors <- read_csv("https://colorado.rstudio.com/rsc/sector-labels/data.csv")
     
     stocks <- portfolio$data 
@@ -934,6 +1008,11 @@ server <- function(input, output, session) {
   
   #portfolio optimisation min risk button 
   observeEvent(input$min_risk, {
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     temp <- portfolio$data 
     
@@ -979,6 +1058,11 @@ server <- function(input, output, session) {
   #portfolio optimistaion max return button
   observeEvent(input$max_return, {
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- portfolio$data 
     
     if (length(temp$ticker) <= 1 )
@@ -1022,6 +1106,11 @@ server <- function(input, output, session) {
   #portfolio optimisation piechart
   output$piechart1 <- renderPlotly({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     temp <- optimised_port$data
     
@@ -1049,6 +1138,11 @@ server <- function(input, output, session) {
   
   #portfolio optimisation table
   output$table1 <- renderDataTable({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     temp <- optimised_port$data
@@ -1101,6 +1195,11 @@ server <- function(input, output, session) {
   
   #portfolio optimisation efficient frontier
   output$eff_front <- renderPlot({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
     
     annualized.moments <- function(R, scale=12, portfolio=NULL){
       out <- list()
@@ -1169,6 +1268,11 @@ server <- function(input, output, session) {
   #portfolio optimistaion risk 
   output$opti_risk <- renderPlotly({
     
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     # data 
     tickers <-  portfolio$data[,1] %>% as.vector()
     
@@ -1210,6 +1314,12 @@ server <- function(input, output, session) {
   
   #portfolio tab risk tab text 
   output$opti_portfolio_mean <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- opti_port_mean$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
@@ -1219,6 +1329,12 @@ server <- function(input, output, session) {
   
   #portfolio optimisation risk 
   output$opti_portfolio_sd <- renderText({
+    
+    shiny::validate(
+      need(is.na(input$ticker), ""),
+      need(input$quantity, "")
+    )
+    
     temp <- opti_port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
     
