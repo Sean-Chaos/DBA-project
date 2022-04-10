@@ -62,15 +62,14 @@ ui <- navbarPage(title = 'Portfolio manager',
                                            label = 'Quantity of stock', min = 0, value = 0 ),
                               
                               actionButton('add_portfolio',
-                                           label = 'Add stock to portfolio',
-                                           class = "btn-success"),
-                              
+                                            label = 'addㅤㅤㅤㅤ',
+                                            icon = icon('glyphicon glyphicon-plus',lib = "glyphicon"),
+                                            class = "btn-success"),
                               
                               actionButton('remove_portfolio',
-                                           label = 'Remove stock from portfolio',
-                                           class = "btn-danger")
-                              
-                              
+                                            label = 'removeㅤㅤㅤ',
+                                            icon = icon('glyphicon glyphicon-minus',lib = "glyphicon"),
+                                            class = "btn-danger")
                               
                             ),
                             
@@ -97,7 +96,11 @@ ui <- navbarPage(title = 'Portfolio manager',
                           
                           sidebarLayout(
                             sidebarPanel(
-                              headerPanel(title = 'Overview'),
+                              
+                              h3('My Portfolio'),
+                              h4(textOutput('portfolio_value')),
+                              h6(htmlOutput('profit_loss_1')),
+                              
                               sliderInput('slider2',
                                           label = 'Zoom slider',
                                           min = Sys.Date()- 10*365,
@@ -107,15 +110,14 @@ ui <- navbarPage(title = 'Portfolio manager',
                               ),
                               
                               
-                              checkboxInput('snp500',
-                                            label = 'Add S&P 500 as benchmark'),
-                              checkboxInput('portfolio_only',
-                                            label = 'Only show portfolio line'),
+                              materialSwitch('snp500',
+                                             label = 'S&P 500 as benchmark'),
                               
+                              materialSwitch('portfolio_only',
+                                             label = 'Only Portfolioㅤㅤㅤㅤ'),
                               
-                              h4('Portfolio Value'),
-                              h5(textOutput('portfolio_value')),
-                              h6(htmlOutput('profit_loss_1')),
+                              br(),
+                              
                               h6(textOutput('portfolio_mean')),
                               h6(textOutput('portfolio_sd')),
                               
@@ -129,9 +131,17 @@ ui <- navbarPage(title = 'Portfolio manager',
                             mainPanel(
                               tabsetPanel(
                                 type = 'tabs',
-                                tabPanel('Portfolio Returns', br(), dygraphOutput('portfolio_returns_chart')),
-                                tabPanel('Portfolio Value', br(), dygraphOutput('portfolio_value_chart')),
-                                tabPanel('Risk distribution', br(), plotlyOutput('risk_dist'))
+                                tabPanel('Portfolio Returns',
+                                         br(),
+                                         dygraphOutput('portfolio_returns_chart')),
+                                
+                                tabPanel('Portfolio Value',
+                                         br(),
+                                         dygraphOutput('portfolio_value_chart')),
+                                
+                                tabPanel('Risk distribution',
+                                         br(),
+                                         plotlyOutput('risk_dist'))
                               ),
                               h3('My portfolio'),
                               div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 75%; width: 75%")
@@ -154,16 +164,16 @@ ui <- navbarPage(title = 'Portfolio manager',
                  # SECTOR PEFORMACE TAB
                  #--------------------------------------------------------------------
                  tabPanel(title = 'Sector peformace',
-                          headerPanel(title = 'Portfolio optimizer'),
+                          headerPanel(title = 'Sector Peformace'),
                           sidebarLayout(
                             sidebarPanel(
                               h3('Sector peformance'),
+                              br(),
                               plotOutput('moving_ave')
                             ),
                             
                             #--------------------------------------------------------------------
                             mainPanel(
-                              helpText('TEMP'),
                               plotlyOutput('sector_pie_chart'),
                               div(DT::dataTableOutput("sector_allocation_table"), style = "font-size: 75%; width: 75%")
                               
@@ -181,12 +191,22 @@ ui <- navbarPage(title = 'Portfolio manager',
                           
                           sidebarLayout(
                             sidebarPanel(
+                              h3('Optimisations'),
                               h6('Please choose how you would like to optimise your portfolio'),
                               
                               actionButton('min_risk',
-                                           label = 'Minimum risk'),
+                                           label = 'Minimum risk',
+                                           class = "btn-success"),
+                              
                               actionButton('max_return',
-                                           label = 'Maximise return'),
+                                           label = 'Maximise return',
+                                           class = "btn-danger"),
+                              
+                              br(),
+                              br(),
+                              br(),
+                              br(),
+                              
                               h4('Proposed Portfolio'),
                               h6(textOutput('opti_portfolio_mean')),
                               h6(textOutput('opti_portfolio_sd'))
@@ -196,7 +216,6 @@ ui <- navbarPage(title = 'Portfolio manager',
                             #--------------------------------------------------------------------
                             mainPanel(
                               tabsetPanel(
-                                br(),
                                 tabPanel('Asset allocation', br(), plotlyOutput('piechart1')),
                                 tabPanel('Efficient frontier', br(), plotOutput('eff_front')),
                                 tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
@@ -309,8 +328,15 @@ server <- function(input, output, session) {
     
     
     #weekend causing crashes 
+    
     tdy <- Sys.Date()
     day <- weekdays(tdy)
+    
+    if (day == 'Saturday' | day == 'Sunday') {
+      showNotification("The date you chose is a weekend. The stock market is not open on weekends.
+                       The purchase price used will be the closing price on Friday.",
+                       type = 'warning')
+    }
     
     pur_date <- case_when(day == "Saturday" ~ tdy - 1, 
                      day == "Sunday" ~ tdy - 2, 
@@ -403,7 +429,8 @@ server <- function(input, output, session) {
     temp <- portfolio$data
     
     out <- temp %>% transmute(weight = quantity * last_price) %>% sum(.$weight) %>%
-      round(.,digits = 2) %>% as.character()
+      round(.,digits = 2) %>% as.character() %>% paste0('$', .)
+    
     return(out)
     
   })
@@ -532,8 +559,8 @@ server <- function(input, output, session) {
     names(port_dollar) <- sub("\\..*", "", names(port_dollar))
     
     dygraph(port_dollar,
-            main = "Portfolio Value")
-    
+            main = "Portfolio Value") %>% 
+      dyAxis("y", label = "Price")
   })
   
   
@@ -615,7 +642,8 @@ server <- function(input, output, session) {
     names(port_dollar) <- sub("\\..*", "", names(port_dollar))
     
     dygraph(port_dollar,
-            main = "Portfolio Returns")
+            main = "Portfolio Returns") %>% 
+      dyAxis("y", label = "Returns")
     
     
   })
