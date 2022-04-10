@@ -179,7 +179,7 @@ body <- dashboardBody(
                      plotlyOutput('risk_dist'))
           ),
           h3('My portfolio'),
-          div(DT::dataTableOutput("Stock_peformance"))
+          div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 80%")
           
           
         )
@@ -303,7 +303,7 @@ server <- function(input, output, session) {
   output$stock_plot <- renderPlotly({
     
     shiny::validate(
-      need(input$ticker, ""),
+      need(input$ticker != 'NA', ""),
       need(input$quantity, "")
     )
     
@@ -625,39 +625,46 @@ server <- function(input, output, session) {
     
     temp <- list()
     
-    for (i in 1:length(ticker_name)){
-      
-      data <- na.omit(getSymbols(ticker_name[i], 
-                                 #change to slider 
-                                 from = input$slider2,
-                                 to = Sys.Date(),
-                                 auto.assign = F))[,6] 
-      
-      data <- ROC(data)
-      
-      data[,1][1] <- 0
-      data[,1] <- cumsum(data[,1])
-      
-      
-      temp[[i]] <- assign(paste0('stock',as.character(i)), data)
-    }
     
     
     
     if(length(ticker_name)==1){
       
       portfolio_returns <- ROC(na.omit(getSymbols(ticker_name[1],
-                                              #change to slider 
-                                              from = input$slider2,
-                                              to = Sys.Date(),
-                                              auto.assign = F))[,6])
+                                                  #change to slider 
+                                                  from = input$slider2,
+                                                  to = Sys.Date(),
+                                                  auto.assign = F))[,6])
       portfolio_returns[,1][1] <- 0
       portfolio_returns[,1] <- cumsum(portfolio_returns[,1])
-        
-      }
+      
+    }
     
     else{
-      portfolio_returns <- do.call('merge.xts',temp)}
+      
+      for (i in 1:length(ticker_name)){
+        
+        data <- na.omit(getSymbols(ticker_name[i], 
+                                   #change to slider 
+                                   from = input$slider2,
+                                   to = Sys.Date(),
+                                   auto.assign = F))[,6] 
+        
+        data <- ROC(data)
+        
+        data[,1][1] <- 0
+        data[,1] <- cumsum(data[,1])
+        
+        
+        temp[[i]] <- assign(paste0('stock',as.character(i)), data)
+      }
+      
+      portfolio_returns <- do.call('merge.xts',temp)
+      
+      }
+    
+    
+    
     
     
     start_capital <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
@@ -1084,7 +1091,7 @@ server <- function(input, output, session) {
   output$piechart1 <- renderPlotly({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
@@ -1116,7 +1123,7 @@ server <- function(input, output, session) {
   output$table1 <- renderDataTable({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
@@ -1172,7 +1179,7 @@ server <- function(input, output, session) {
   output$eff_front <- renderPlot({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     annualized.moments <- function(R, scale=12, portfolio=NULL){
@@ -1243,7 +1250,7 @@ server <- function(input, output, session) {
   output$opti_risk <- renderPlotly({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     # data 
@@ -1289,7 +1296,7 @@ server <- function(input, output, session) {
   output$opti_portfolio_mean <- renderText({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     temp <- opti_port_mean$data %>% as.numeric() 
@@ -1303,7 +1310,7 @@ server <- function(input, output, session) {
   output$opti_portfolio_sd <- renderText({
     
     shiny::validate(
-      need(dim(portfolio$data)[1] != 0, "")
+      need(length(optimised_port$data) != 0, "")
     )
     
     temp <- opti_port_sd$data %>% as.numeric() 
