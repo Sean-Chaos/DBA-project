@@ -15,238 +15,243 @@ library(RCurl)
 library(RJSONIO)
 library(ggtext)
 library(roll)
-library(gganimate)
-library(gifski)
-library(png)
 library(RColorBrewer)
 library(DT)
 library(shinyvalidate)
 library(shinyWidgets)
+library(shinydashboard)
+library(dashboardthemes)
 
 
 
+header <- 
+  dashboardHeader( title = HTML("Project name"), 
+                   disable = FALSE, 
+                   titleWidth  = 550)
 
 
 
+siderbar <- 
+  dashboardSidebar( 
+    width = 200,
+    sidebarMenu(
+      id = 'sidebar',
+      style = "position: relative; overflow: visible;",
+      
+      ## 1st tab show the Main dashboard -----------
+      menuItem( "Input", tabName = 'input',
+                icon = icon('glyphicon glyphicon-log-in	',lib = "glyphicon")),
+      
+      ## 2nd Second tab shows the country/region level tab --------------
+      menuItem("Portfolio Management", tabName = 'portfolio',
+               icon = icon('glyphicon glyphicon-piggy-bank',lib = "glyphicon")),
+      
+      ## 3rd tab shows commodity intel ----------
+      menuItem( "World distribution", tabName = 'world',
+                icon = icon('globe')),
+      
+      ## 5th tab Data source, definition , i.e., help ---------------
+      menuItem( "Sector Peformace", tabName = 'sector',
+                icon = icon('glyphicon glyphicon-stats',lib = "glyphicon") ),
+      
+      ## 6th tab monthly update ----------------------
+      menuItem( "Portfolio Optimizer", tabName = 'optimizer',
+                icon = icon('glyphicon glyphicon-education',lib = "glyphicon"),
+                badgeLabel = "new", badgeColor = "green" )
+    )
+  )
 
 
-ui <- navbarPage(title = 'Portfolio manager',
-                 theme = bs_theme(version = 4, bootswatch = 'sandstone'),
-                
-                 tabPanel(title = 'Stock input',
-                          headerPanel(title = 'Stock input'),
-                          
-                          sidebarLayout(
-                            sidebarPanel(
-                              
-                              headerPanel(title = 'Input pannel'),
-                              h6('Please add the stocks that you have in your portfolio currently'),
-                              
-                              verbatimTextOutput('ticker'),
-                              
-                              textInput('ticker', 
-                                        label = 'Ticker', value = 'NA'),
-                              
-                              sliderInput('slider1',
-                                          label = 'Zoom slider',
-                                          min = Sys.Date()- 10*365,
-                                          max = Sys.Date(),
-                                          value = Sys.Date()-365,
-                                          step = 30),
-                              
-                              dateInput('date1',
-                                        label = 'Date purchased',
-                                        value = Sys.Date()),
-                              
-                              numericInput('quantity',
-                                           label = 'Quantity of stock', min = 0, value = 0 ),
-                              
-                              actionButton('add_portfolio',
-                                            label = 'addㅤㅤㅤㅤ',
-                                            icon = icon('glyphicon glyphicon-plus',lib = "glyphicon"),
-                                            class = "btn-success"),
-                              
-                              actionButton('remove_portfolio',
-                                            label = 'removeㅤㅤㅤ',
-                                            icon = icon('glyphicon glyphicon-minus',lib = "glyphicon"),
-                                            class = "btn-danger")
-                              
-                            ),
-                            
-                            
-                            mainPanel(
-                              br(),
-                              plotlyOutput('stock_plot'),
-                              br(),
-                              div(DT::dataTableOutput("df_data_out"), style = "font-size: 75%; width: 75%")
-                              
-                            )
-                          )
-                 ),
-                 
-                 
-                 
-                 
-                 
-                 #--------------------------------------------------------------------
-                 # PORTFOLIO TAB
-                 #--------------------------------------------------------------------
-                 tabPanel(title = 'Portfolio',
-                          headerPanel(title = 'Portfolio management'),
-                          
-                          sidebarLayout(
-                            sidebarPanel(
-                              
-                              h3('My Portfolio'),
-                              h4(textOutput('portfolio_value')),
-                              h6(htmlOutput('profit_loss_1')),
-                              
-                              sliderInput('slider2',
-                                          label = 'Zoom slider',
-                                          min = Sys.Date()- 10*365,
-                                          max = Sys.Date(),
-                                          value = Sys.Date()-365,
-                                          step = 30
-                              ),
-                              
-                              
-                              materialSwitch('snp500',
-                                             label = 'S&P 500 as benchmark'),
-                              
-                              materialSwitch('portfolio_only',
-                                             label = 'Only Portfolioㅤㅤㅤㅤ'),
-                              
-                              br(),
-                              
-                              h6(textOutput('portfolio_mean')),
-                              h6(textOutput('portfolio_sd')),
-                              
-                              h5('Portfolio allocation'),
-                              
-                              plotOutput('tree_map_portfolio_allocation'),
-                              
-                            ),
-                            
-                            #--------------------------------------------------------------------
-                            mainPanel(
-                              tabsetPanel(
-                                type = 'tabs',
-                                tabPanel('Portfolio Returns',
-                                         br(),
-                                         dygraphOutput('portfolio_returns_chart')),
-                                
-                                tabPanel('Portfolio Value',
-                                         br(),
-                                         dygraphOutput('portfolio_value_chart')),
-                                
-                                tabPanel('Risk distribution',
-                                         br(),
-                                         plotlyOutput('risk_dist'))
-                              ),
-                              h3('My portfolio'),
-                              div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 75%; width: 75%")
-                              
-                              
-                            )
-                            
-                            
-                            
-                          )
-                 ),
-                 
-                 #--------------------------------------------------------------------
-                 # WORLD DISTRIBUTION TAB
-                 #--------------------------------------------------------------------
-                 tabPanel(title = 'World distribution'),
-                 
-                 
-                 #--------------------------------------------------------------------
-                 # SECTOR PEFORMACE TAB
-                 #--------------------------------------------------------------------
-                 tabPanel(title = 'Sector peformace',
-                          headerPanel(title = 'Sector Peformace'),
-                          sidebarLayout(
-                            sidebarPanel(
-                              h3('Sector peformance'),
-                              br(),
-                              plotOutput('moving_ave')
-                            ),
-                            
-                            #--------------------------------------------------------------------
-                            mainPanel(
-                              plotlyOutput('sector_pie_chart'),
-                              div(DT::dataTableOutput("sector_allocation_table"), style = "font-size: 75%; width: 75%")
-                              
-                            )
-                          ),
-                          ),
-                 
-                 
-                 
-                 #--------------------------------------------------------------------
-                 # pORTFOLIO OPTIMISER TAB
-                 #--------------------------------------------------------------------
-                 tabPanel(title = 'Portfolio optimizer',
-                          headerPanel(title = 'Portfolio optimizer'),
-                          
-                          sidebarLayout(
-                            sidebarPanel(
-                              h3('Optimisations'),
-                              h6('Please choose how you would like to optimise your portfolio'),
-                              
-                              actionButton('min_risk',
-                                           label = 'Minimum risk',
-                                           class = "btn-success"),
-                              
-                              actionButton('max_return',
-                                           label = 'Maximise return',
-                                           class = "btn-danger"),
-                              
-                              br(),
-                              br(),
-                              br(),
-                              br(),
-                              
-                              h4('Proposed Portfolio'),
-                              h6(textOutput('opti_portfolio_mean')),
-                              h6(textOutput('opti_portfolio_sd'))
-                              
-                            ),
-                            
-                            #--------------------------------------------------------------------
-                            mainPanel(
-                              tabsetPanel(
-                                tabPanel('Asset allocation', br(), plotlyOutput('piechart1')),
-                                tabPanel('Efficient frontier', br(), plotOutput('eff_front')),
-                                tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
-                                
-                              ),
-                              div(DT::dataTableOutput("table1"), style = "font-size: 75%; width: 75%")
-                              
-                            ),
-                            
-                            
-                          )
-                          
-                          
-                          
-                          
-                          
-                          
-                          
-                          
-                 )
+
+body <- dashboardBody(
+  shinyDashboardThemes(
+    theme = "poor_mans_flatly"
+  ),
+  
+  tabItems(
+    tabItem(
+      tabName = 'input',
+      headerPanel(title = 'Stock input'),
+      
+      sidebarLayout(
+        sidebarPanel(
+          
+          headerPanel(title = 'Input pannel'),
+          h6('Please add the stocks that you have in your portfolio currently'),
+          
+          verbatimTextOutput('ticker'),
+          
+          textInput('ticker', 
+                    label = 'Ticker', value = 'NA'),
+          
+          sliderInput('slider1',
+                      label = 'Zoom slider',
+                      min = Sys.Date()- 10*365,
+                      max = Sys.Date(),
+                      value = Sys.Date()-365,
+                      step = 30),
+          
+          dateInput('date1',
+                    label = 'Date purchased',
+                    value = Sys.Date()),
+          
+          numericInput('quantity',
+                       label = 'Quantity of stock', min = 0, value = 0 ),
+          
+          actionButton('add_portfolio',
+                       label = 'add',
+                       icon = icon('glyphicon glyphicon-plus',lib = "glyphicon"),
+                       class = "btn-success"),
+          
+          actionButton('remove_portfolio',
+                       label = 'remove',
+                       icon = icon('glyphicon glyphicon-minus',lib = "glyphicon"),
+                       class = "btn-danger")),
+        
+        mainPanel(
+          br(),
+          plotlyOutput('stock_plot'),
+          br(),
+          div(DT::dataTableOutput("df_data_out"))
+          
+        )
+      )
+    ),
+    
+    tabItem(
+      tabName = 'portfolio',
+      headerPanel(title = 'Portfolio management'),
+      
+      sidebarLayout(
+        sidebarPanel(
+          
+          h3('My Portfolio'),
+          h4(textOutput('portfolio_value')),
+          h6(htmlOutput('profit_loss_1')),
+          
+          sliderInput('slider2',
+                      label = 'Zoom slider',
+                      min = Sys.Date()- 10*365,
+                      max = Sys.Date(),
+                      value = Sys.Date()-365,
+                      step = 30
+          ),
+          
+          
+          materialSwitch('snp500',
+                         label = 'S&P 500 as benchmark'),
+          
+          materialSwitch('portfolio_only',
+                         label = 'Only Portfolioㅤㅤㅤㅤ'),
+          
+          br(),
+          
+          h6(textOutput('portfolio_mean')),
+          h6(textOutput('portfolio_sd')),
+          
+          h5('Portfolio allocation'),
+          
+          plotOutput('tree_map_portfolio_allocation'),
+          
+        ),
+        
+        #--------------------------------------------------------------------
+        mainPanel(
+          tabsetPanel(
+            type = 'tabs',
+            tabPanel('Portfolio Returns',
+                     br(),
+                     dygraphOutput('portfolio_returns_chart')),
+            
+            tabPanel('Portfolio Value',
+                     br(),
+                     dygraphOutput('portfolio_value_chart')),
+            
+            tabPanel('Risk distribution',
+                     br(),
+                     plotlyOutput('risk_dist'))
+          ),
+          h3('My portfolio'),
+          div(DT::dataTableOutput("Stock_peformance"))
+          
+          
+        )
+        
+        
+        
+      )
+    ),
+    
+    tabItem(
+      tabName = 'world'
+    ),
+    
+    tabItem(
+      tabName = 'sector',
+      headerPanel(title = 'Sector Peformace'),
+      sidebarLayout(
+        sidebarPanel(
+          h3('Sector peformance'),
+          br(),
+          plotOutput('moving_ave')
+        ),
+        
+        #--------------------------------------------------------------------
+        mainPanel(
+          plotlyOutput('sector_pie_chart'),
+          div(DT::dataTableOutput("sector_allocation_table"), style = "font-size: 75%; width: 75%")
+          
+        )
+      ),
+    ),
+    
+    tabItem(
+      tabName = 'optimizer',
+      headerPanel(title = 'Portfolio optimizer'),
+      
+      sidebarLayout(
+        sidebarPanel(
+          h3('Optimisations'),
+          h6('Please choose how you would like to optimise your portfolio'),
+          
+          actionButton('min_risk',
+                       label = 'Minimum risk',
+                       class = "btn-success"),
+          
+          actionButton('max_return',
+                       label = 'Maximise return',
+                       class = "btn-danger"),
+          
+          br(),
+          br(),
+          br(),
+          br(),
+          
+          h4('Proposed Portfolio'),
+          h6(textOutput('opti_portfolio_mean')),
+          h6(textOutput('opti_portfolio_sd'))
+          
+        ),
+        
+        #--------------------------------------------------------------------
+        mainPanel(
+          tabsetPanel(
+            tabPanel('Asset allocation', br(), plotlyOutput('piechart1')),
+            tabPanel('Efficient frontier', br(), plotOutput('eff_front')),
+            tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
+            
+          ),
+          div(DT::dataTableOutput("table1"))
+          
+        ),
+        
+        
+      )
+    )
+  )
 )
 
-
-
-
-
-
-
-
-
-
+ui <- dashboardPage(header, siderbar, body )
 
 
 
@@ -329,7 +334,7 @@ server <- function(input, output, session) {
     
     #weekend causing crashes 
     
-    tdy <- Sys.Date()
+    tdy <- input$date1
     day <- weekdays(tdy)
     
     if (day == 'Saturday' | day == 'Sunday') {
@@ -402,7 +407,7 @@ server <- function(input, output, session) {
   })
   
   
-  #KEEP BUT MAKE IT LOOK BETTER
+  #Table
   output$df_data_out <- renderDataTable({
     
     temp <- portfolio$data %>% mutate(last_price = round(last_price, digits = 2),
@@ -444,8 +449,9 @@ server <- function(input, output, session) {
     current <- temp %>% transmute(weight = quantity * last_price) %>% sum(.$weight)
     
     past <- temp %>% transmute(weight = quantity * purchase_price) %>% sum(.$weight) 
+    
     out <- current - past
-    out <- out %>% round(.,digits = 2) 
+    out <- out %>% round(.,digits = 2)
     
     if (out == 0) 
       return(paste0("<span style=\"color:black\">", 
