@@ -21,6 +21,8 @@ library(png)
 library(RColorBrewer)
 library(DT)
 library(shinyvalidate)
+library(shinyWidgets)
+
 
 
 
@@ -32,11 +34,12 @@ ui <- navbarPage(title = 'Portfolio manager',
                  theme = bs_theme(version = 4, bootswatch = 'sandstone'),
                 
                  tabPanel(title = 'Stock input',
+                          headerPanel(title = 'Stock input'),
                           
                           sidebarLayout(
                             sidebarPanel(
-                              headerPanel(title = 'Stock input'),
                               
+                              headerPanel(title = 'Input pannel'),
                               h6('Please add the stocks that you have in your portfolio currently'),
                               
                               verbatimTextOutput('ticker'),
@@ -73,8 +76,9 @@ ui <- navbarPage(title = 'Portfolio manager',
                             
                             
                             mainPanel(
+                              br(),
                               plotlyOutput('stock_plot'),
-                              
+                              br(),
                               div(DT::dataTableOutput("df_data_out"), style = "font-size: 75%; width: 75%")
                               
                             )
@@ -93,7 +97,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                           
                           sidebarLayout(
                             sidebarPanel(
-                              
+                              headerPanel(title = 'Overview'),
                               sliderInput('slider2',
                                           label = 'Zoom slider',
                                           min = Sys.Date()- 10*365,
@@ -101,6 +105,7 @@ ui <- navbarPage(title = 'Portfolio manager',
                                           value = Sys.Date()-365,
                                           step = 30
                               ),
+                              
                               
                               checkboxInput('snp500',
                                             label = 'Add S&P 500 as benchmark'),
@@ -124,9 +129,9 @@ ui <- navbarPage(title = 'Portfolio manager',
                             mainPanel(
                               tabsetPanel(
                                 type = 'tabs',
-                                tabPanel('Portfolio Returns',dygraphOutput('portfolio_returns_chart')),
-                                tabPanel('Portfolio Value', dygraphOutput('portfolio_value_chart')),
-                                tabPanel('Risk distribution', plotOutput('risk_dist'))
+                                tabPanel('Portfolio Returns', br(), dygraphOutput('portfolio_returns_chart')),
+                                tabPanel('Portfolio Value', br(), dygraphOutput('portfolio_value_chart')),
+                                tabPanel('Risk distribution', br(), plotlyOutput('risk_dist'))
                               ),
                               h3('My portfolio'),
                               div(DT::dataTableOutput("Stock_peformance"), style = "font-size: 75%; width: 75%")
@@ -191,9 +196,10 @@ ui <- navbarPage(title = 'Portfolio manager',
                             #--------------------------------------------------------------------
                             mainPanel(
                               tabsetPanel(
-                                tabPanel('Asset allocation', plotlyOutput('piechart1')),
-                                tabPanel('Efficient frontier', plotOutput('eff_front')),
-                                tabPanel('Optimised risk', plotOutput('opti_risk'))
+                                br(),
+                                tabPanel('Asset allocation', br(), plotlyOutput('piechart1')),
+                                tabPanel('Efficient frontier', br(), plotOutput('eff_front')),
+                                tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
                                 
                               ),
                               div(DT::dataTableOutput("table1"), style = "font-size: 75%; width: 75%")
@@ -273,8 +279,9 @@ server <- function(input, output, session) {
                    colors = c("red", "forestgreen"), hoverinfo = "none") 
     fig <- fig %>% add_segments(y = ~Low, yend = ~High, size = I(1)) 
     fig <- fig %>% add_segments(y = ~Open, yend = ~Close, size = I(3)) 
-    fig <- fig %>% layout(showlegend = FALSE, yaxis = list(title = "Price")) 
-    fig <- fig %>% layout(yaxis = list(title = toupper(as.character(input$ticker))))
+    fig <- fig %>% layout(showlegend = FALSE, title = toupper(as.character(input$ticker))) 
+    fig <- fig %>% layout(yaxis = list(title = 'Price'),
+                          xaxis = list(title = 'Date'))
     
     fig
     
@@ -644,7 +651,7 @@ server <- function(input, output, session) {
   
   
   #portfolio tab risk distribution tab 
-  output$risk_dist <- renderPlot({
+  output$risk_dist <- renderPlotly({
     
     # data 
     tickers <-  portfolio$data[,1] %>% as.vector()
@@ -673,14 +680,13 @@ server <- function(input, output, session) {
     port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
     port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
     
+    fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
+      layout(title = 'Daily Portfolio Returns: 2 Years',
+             yaxis = list(title = 'Portfolio Returns'),
+             xaxis = list(title = 'Frequency')
+             )
     
-    ggplot(ret_data, aes(x = port_ret)) + 
-    geom_histogram(bins = 60) +
-    theme_light() +
-    labs(x = "Portfolio Returns",
-         y = "Frequency",
-         title = "Daily Portfolio Returns: 2 Years")
-    
+    return(fig)
 
   })
   
@@ -1112,7 +1118,7 @@ server <- function(input, output, session) {
   
   
   #portfolio optimistaion risk 
-  output$opti_risk <- renderPlot({
+  output$opti_risk <- renderPlotly({
     
     # data 
     tickers <-  portfolio$data[,1] %>% as.vector()
@@ -1141,12 +1147,14 @@ server <- function(input, output, session) {
     opti_port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
     opti_port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
     
-    ggplot(ret_data, aes(x = port_ret)) + 
-      geom_histogram(bins = 60) +
-      theme_light() +
-      labs(x = "Proposed Portfolio Returns",
-           y = "Frequency",
-           title = "Proposed Daily Portfolio Returns: 2 Years")
+    
+    fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
+      layout(title = 'Daily Portfolio Returns: 2 Years',
+             yaxis = list(title = 'Proposed Portfolio Returns'),
+             xaxis = list(title = 'Frequency')
+      )
+    
+    return(fig)
     
   })
   
