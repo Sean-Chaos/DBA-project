@@ -23,6 +23,10 @@ library(shinydashboard)
 library(dashboardthemes)
 library(ROI.plugin.glpk)
 library(ROI.plugin.quadprog)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(leaflet)
+library(sf)
 
 
 
@@ -53,7 +57,7 @@ siderbar <-
                 icon = icon('globe')),
       
       ## 5th tab Data source, definition , i.e., help ---------------
-      menuItem( "Sector Peformace", tabName = 'sector',
+      menuItem( "Sector Allocation", tabName = 'sector',
                 icon = icon('glyphicon glyphicon-stats',lib = "glyphicon") ),
       
       ## 6th tab monthly update ----------------------
@@ -118,7 +122,7 @@ body <- dashboardBody(
         mainPanel(
           br(),
           plotlyOutput('stock_plot'),
-          br(),
+          h3('Input'),
           div(DT::dataTableOutput("df_data_out"))
           
         )
@@ -137,7 +141,7 @@ body <- dashboardBody(
           
           h3('My Portfolio'),
           h4(textOutput('portfolio_value')),
-          h6(htmlOutput('profit_loss_1')),
+          h5(htmlOutput('profit_loss_1')),
           
           sliderInput('slider2',
                       label = 'Zoom slider',
@@ -156,10 +160,11 @@ body <- dashboardBody(
           
           br(),
           
-          h6(textOutput('portfolio_mean')),
-          h6(textOutput('portfolio_sd')),
+          h5(textOutput('portfolio_mean')),
+          h5(textOutput('portfolio_sd')),
           
-          h5('Portfolio allocation'),
+          br(),
+          h3('Portfolio allocation'),
           
           plotOutput('tree_map_portfolio_allocation'),
           
@@ -192,9 +197,53 @@ body <- dashboardBody(
       )
     ),
     
+    
+    #--------------------------------------------------------------------
+    # WORLD ALLOCATION
+    #--------------------------------------------------------------------
     tabItem(
-      tabName = 'world'
+      tabName = 'world',
+      
+          leafletOutput('world_allocation', height = '90vh'),
+          
+
+        
+
+          absolutePanel(id = 'controls',
+                        class = 'panel panel-default',
+                        top = 0,
+                        left = 0,
+                        bottom = 0,
+                        right = 0,
+                        width = '24vw',
+                        height ='50vh',
+                        fixed= TRUE,
+                        draggable = TRUE,
+                        style =   "background-color: white;
+                                opacity: 0.85;
+                                padding: 20px 20px 20px 20px;
+                                margin: auto;
+                                border-radius: 5pt;
+                                box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);
+                                padding-bottom: 2mm;
+                                padding-top: 1mm;",
+                        
+                        # your assets are mainly located in US
+                        h3(textOutput('main_country')),
+                        
+                        #piechart to show allocation
+                        plotlyOutput('world_pie')
+                        
+                      )
     ),
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -207,14 +256,18 @@ body <- dashboardBody(
       
       tabsetPanel(
         tabPanel('Sector Allocation' , 
+                 h3("Asset Allocation Per Sector"),
                  br(),
                  plotlyOutput('sector_pie_chart')),
             
         tabPanel('Sector Peformance',
-                 h6("Percentage tickers sma 50 above sma 200"),
+                 h3("Percentage tickers sma 50 above sma 200"),
+                 h6('This shows the percentage of stocks whose 50 day moving average beats 
+                    its own 200 day moving average.'),
                  plotOutput('moving_ave'))
         ),
       
+      h3('Sector Allocation'),
       div(DT::dataTableOutput("sector_allocation_table"))
       
       
@@ -238,7 +291,7 @@ body <- dashboardBody(
                        class = "btn-success"),
           
           actionButton('max_return',
-                       label = 'Maximise return',
+                       label = 'Maximum return',
                        class = "btn-danger"),
           
           br(),
@@ -247,8 +300,8 @@ body <- dashboardBody(
           br(),
           
           h4('Proposed Portfolio'),
-          h6(textOutput('opti_portfolio_mean')),
-          h6(textOutput('opti_portfolio_sd'))
+          h5(textOutput('opti_portfolio_mean')),
+          h5(textOutput('opti_portfolio_sd'))
           
         ),
         
@@ -260,6 +313,7 @@ body <- dashboardBody(
             tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
             
           ),
+          h3('Propsed Portfolio'),
           div(DT::dataTableOutput("table1"))
           
         ),
@@ -812,7 +866,7 @@ server <- function(input, output, session) {
     temp <- port_mean$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
-    return(paste0('Portfolio returns: ', temp, '%'))
+    return(paste0('Average portfolio returns: ' , '\n', temp, '%'))
   })
   
   
@@ -826,8 +880,118 @@ server <- function(input, output, session) {
     temp <- port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
     
-    return(paste0('Portfolio standard deviation: ', temp , '%'))
+    return(paste0('Portfolio standard deviation: ', '\n' ,  temp , '%'))
   })
+  
+  #--------------------------------------------------------------------
+  #World allocation 
+  #--------------------------------------------------------------------
+  
+  output$world_allocation <- renderLeaflet({
+    
+    port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
+      mutate(weight = capital / sum(capital))
+    
+    country_df <- read.csv('NYSE_stock_country.csv') %>% as.data.frame() %>%
+      select(symbol, country)
+    country_df[country_df$country == 'US','country'] <- 'United States'
+    
+    port <- left_join(port, country_df, by=c('ticker'='symbol')) 
+    port[is.na(port$country), 'country'] <- 'Unknown'
+    
+    port <- port %>% group_by(country) %>% dplyr::summarise(weight = sum(weight), num = length(weight))
+    
+    world_sf <- ne_countries(scale = 'medium', returnclass = 'sf') %>% 
+      st_transform(.,4326)
+    
+    world_sf <- left_join(world_sf, port, by=c('name'='country')) 
+    
+    
+    
+    
+    #colour pallete
+    factpal <- colorBin(palette = 'viridis', domain = world_sf$weight, na.color = 'transparent')
+    
+    #text labels
+    mylabels <- paste(
+      "Country: ", world_sf$name_long, "<br/>",
+      "Weight: ", world_sf$weight, "<br/>",
+      "Economy: ", world_sf$economy, "<br/>",
+      "Income: ", world_sf$income_grp, "<br/>"
+    ) %>%
+      lapply(htmltools::HTML)
+    
+    
+    #map plotting
+    map <- leaflet(world_sf) %>%
+      addPolygons(
+        fillColor = ~factpal(weight),
+        stroke = TRUE, 
+        color = 'white', 
+        weight = 1.5, 
+        label = mylabels, 
+      ) %>% 
+      addTiles() %>%
+      
+      addLegend(pal=factpal,
+                values = ~world_sf$weight, 
+                opacity = .3,
+                title = 'World Allocation',
+      ) %>%
+      
+      addControl(html= "<h5> World Map </h5>", position = 'bottomleft')
+    
+    
+    return(map)
+    
+    
+  })
+  
+  
+  output$main_country <- renderText({
+    return('TEMP')
+  })
+  
+  
+  #world allocation pie chart 
+  output$world_pie <- renderPlotly({
+    
+    port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
+      mutate(weight = capital / sum(capital))
+    
+    country_df <- read.csv('NYSE_stock_country.csv') %>% as.data.frame() %>%
+      select(symbol, country)
+    
+    country_df[country_df$country == 'US','country'] <- 'United States'
+    
+    port <- left_join(port, country_df, by=c('ticker'='symbol')) 
+    port[is.na(port$country), 'country'] <- 'Unknown'
+    
+    port <- port %>% group_by(country) %>% dplyr::summarise(weight = sum(weight), num = length(weight))
+    
+    print(port)
+    
+    
+    
+    fig <- plot_ly(port, labels = ~country, values = ~weight, type = 'pie',
+                    textposition = 'inside',
+                    textinfo = 'label+percent',
+                    insidetextfont = list(color = 'Black'),
+                    hoverinfo = 'text',
+                    text = ~paste('</br> Stocks from ', country, ' : ', num),
+                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                    #The 'pull' attribute can also be used to create space between the sectors
+                    showlegend = TRUE)
+    
+    fig <- fig %>% layout(title = 'Country Allocation',
+                          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    
+    return(fig)
+    
+  })
+  
+  
   
   
   
@@ -851,8 +1015,6 @@ server <- function(input, output, session) {
     
     stock.sector[is.na(stock.sector$sector),'sector'] <- 'Other/ETF'
     
-    print(stock.sector)
-    
     stock.sector.num <- stock.sector %>% group_by(sector) %>%
       summarize(Num.diff.stocks = n(),
                 Total.asset = round(sum(Total),2))
@@ -870,8 +1032,7 @@ server <- function(input, output, session) {
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
     
-    fig2 <- fig2 %>% layout(title = 'Percentage of Assets per sector',
-                            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+    fig2 <- fig2 %>% layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
     
     fig2
@@ -1317,7 +1478,7 @@ server <- function(input, output, session) {
     temp <- opti_port_mean$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
     
-    return(paste0('Portfolio returns: ', temp, '%'))
+    return(paste0('Portfolio returns: ' , '\n', temp, '%'))
   })
   
   
@@ -1331,7 +1492,7 @@ server <- function(input, output, session) {
     temp <- opti_port_sd$data %>% as.numeric() 
     temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
     
-    return(paste0('Portfolio standard deviation: ', temp , '%'))
+    return(paste0('Portfolio standard deviation: ' , '\n', temp , '%'))
   })
   
   
