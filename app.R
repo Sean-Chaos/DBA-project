@@ -198,6 +198,10 @@ body <- dashboardBody(
     ),
     
     
+    
+    
+    
+    
     #--------------------------------------------------------------------
     # WORLD ALLOCATION
     #--------------------------------------------------------------------
@@ -205,43 +209,29 @@ body <- dashboardBody(
       tabName = 'world',
       
           leafletOutput('world_allocation', height = '90vh'),
-          
-
-        
-
+      
           absolutePanel(id = 'controls',
                         class = 'panel panel-default',
-                        top = 0,
-                        left = 0,
-                        bottom = 0,
-                        right = 0,
+                        top = 75,
+                        left = 'auto',
                         width = '24vw',
-                        height ='50vh',
+                        height ='45vh',
                         fixed= TRUE,
                         draggable = TRUE,
                         style =   "background-color: white;
-                                opacity: 0.85;
-                                padding: 20px 20px 20px 20px;
+                                opacity: 0.65;
+                                padding: 10px 10px 10px 10px;
                                 margin: auto;
                                 border-radius: 5pt;
                                 box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);
-                                padding-bottom: 2mm;
+                                padding-bottom: 1mm;
                                 padding-top: 1mm;",
                         
-                        # your assets are mainly located in US
-                        h3(textOutput('main_country')),
-                        
-                        #piechart to show allocation
-                        plotlyOutput('world_pie')
+                          #piechart to show allocation
+                          plotOutput('world_pie')
                         
                       )
     ),
-    
-    
-    
-    
-    
-    
     
     
     
@@ -598,7 +588,7 @@ server <- function(input, output, session) {
                    border.col = c("black"),             
                    border.lwds = 1,
                    
-                   fontsize.labels=3,
+                   fontsize.labels=5,
                    fontcolor.labels="white",
                    fontface.labels=1,            
                    bg.labels=c("transparent"),              
@@ -883,10 +873,15 @@ server <- function(input, output, session) {
     return(paste0('Portfolio standard deviation: ', '\n' ,  temp , '%'))
   })
   
+  
+  
+  
+  
   #--------------------------------------------------------------------
   #World allocation 
   #--------------------------------------------------------------------
   
+  #leaflet map
   output$world_allocation <- renderLeaflet({
     
     port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
@@ -897,7 +892,7 @@ server <- function(input, output, session) {
     country_df[country_df$country == 'US','country'] <- 'United States'
     
     port <- left_join(port, country_df, by=c('ticker'='symbol')) 
-    port[is.na(port$country), 'country'] <- 'Unknown'
+    port[is.na(port$country), 'country'] <- 'Not listed in NYSE'
     
     port <- port %>% group_by(country) %>% dplyr::summarise(weight = sum(weight), num = length(weight))
     
@@ -908,14 +903,13 @@ server <- function(input, output, session) {
     
     
     
-    
     #colour pallete
     factpal <- colorBin(palette = 'viridis', domain = world_sf$weight, na.color = 'transparent')
     
     #text labels
     mylabels <- paste(
       "Country: ", world_sf$name_long, "<br/>",
-      "Weight: ", world_sf$weight, "<br/>",
+      "Weight: ", paste0(as.character(round(world_sf$weight*100 , digits = 2)), '%'), "<br/>",
       "Economy: ", world_sf$economy, "<br/>",
       "Income: ", world_sf$income_grp, "<br/>"
     ) %>%
@@ -939,7 +933,9 @@ server <- function(input, output, session) {
                 title = 'World Allocation',
       ) %>%
       
-      addControl(html= "<h5> World Map </h5>", position = 'bottomleft')
+      addControl(html= "<h5> World Map </h5>", position = 'bottomleft') %>%
+      
+      setView(lat = 55.3781, lng = 3.4360, zoom = 3)
     
     
     return(map)
@@ -948,13 +944,8 @@ server <- function(input, output, session) {
   })
   
   
-  output$main_country <- renderText({
-    return('TEMP')
-  })
-  
-  
-  #world allocation pie chart 
-  output$world_pie <- renderPlotly({
+  #world allocation treemap 
+  output$world_pie <- renderPlot({
     
     port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       mutate(weight = capital / sum(capital))
@@ -965,27 +956,39 @@ server <- function(input, output, session) {
     country_df[country_df$country == 'US','country'] <- 'United States'
     
     port <- left_join(port, country_df, by=c('ticker'='symbol')) 
-    port[is.na(port$country), 'country'] <- 'Unknown'
+    port[is.na(port$country), 'country'] <- 'Not listed in NYSE'
     
-    port <- port %>% group_by(country) %>% dplyr::summarise(weight = sum(weight), num = length(weight))
+    port <- port %>% group_by(country) %>% 
+      dplyr::summarise(weight = sum(weight), num = length(weight)) 
     
     print(port)
     
+    port <- port %>%
+      mutate(plot_index =paste(country, paste0(as.character(round(weight*100 , digits = 2)), '%'),
+                               sep ="\n"))
+      
+    print(port)
     
     
-    fig <- plot_ly(port, labels = ~country, values = ~weight, type = 'pie',
-                    textposition = 'inside',
-                    textinfo = 'label+percent',
-                    insidetextfont = list(color = 'Black'),
-                    hoverinfo = 'text',
-                    text = ~paste('</br> Stocks from ', country, ' : ', num),
-                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
-                    #The 'pull' attribute can also be used to create space between the sectors
-                    showlegend = TRUE)
-    
-    fig <- fig %>% layout(title = 'Country Allocation',
-                          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    fig <- treemap(port,
+                   
+                  index = c('plot_index'),
+                  vSize = 'weight',
+                  
+                  title = 'Asset Location',
+                  palette = 'Dark2',
+                  
+                  border.col = c("black"),             
+                  border.lwds = 1,
+                  
+                  fontsize.labels=5,
+                  fontcolor.labels="white",
+                  fontface.labels=1,            
+                  bg.labels=c("transparent"),              
+                  align.labels=c("left", "top"),                                  
+                  overlap.labels=0.5,
+                  inflate.labels=T
+    )
     
     return(fig)
     
