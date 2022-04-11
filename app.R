@@ -21,6 +21,8 @@ library(shinyvalidate)
 library(shinyWidgets)
 library(shinydashboard)
 library(dashboardthemes)
+library(ROI.plugin.glpk)
+library(ROI.plugin.quadprog)
 
 
 
@@ -68,6 +70,7 @@ body <- dashboardBody(
     theme = "poor_mans_flatly"
   ),
   
+  
   tabItems(
     
     #--------------------------------------------------------------------
@@ -97,7 +100,7 @@ body <- dashboardBody(
           
           dateInput('date1',
                     label = 'Date purchased',
-                    value = Sys.Date()),
+                    value = Sys.Date()-1),
           
           numericInput('quantity',
                        label = 'Quantity of stock', min = 0, value = 0 ),
@@ -200,21 +203,21 @@ body <- dashboardBody(
     #--------------------------------------------------------------------
     tabItem(
       tabName = 'sector',
-      headerPanel(title = 'Sector Peformace'),
-      sidebarLayout(
-        sidebarPanel(
-          h3('Sector peformance'),
-          h6("Percentage tickers sma 50 above sma 200",),
-          plotOutput('moving_ave')
+      headerPanel(title = 'Asset Sector Allocation'),
+      
+      tabsetPanel(
+        tabPanel('Sector Allocation' , 
+                 br(),
+                 plotlyOutput('sector_pie_chart')),
+            
+        tabPanel('Sector Peformance',
+                 h6("Percentage tickers sma 50 above sma 200"),
+                 plotOutput('moving_ave'))
         ),
-        
-        #--------------------------------------------------------------------
-        mainPanel(
-          plotlyOutput('sector_pie_chart'),
-          div(DT::dataTableOutput("sector_allocation_table"))
-          
-        )
-      ),
+      
+      div(DT::dataTableOutput("sector_allocation_table"))
+      
+      
     ),
     
     
@@ -295,6 +298,12 @@ server <- function(input, output, session) {
       "Quantity must be more than 1"
     }
   })
+  #input validation for proper date 
+  iv$add_rule('date1', function(value){
+    if (value > Sys.Date()) {
+      'The date chosen cannot be in the future'
+    }
+  })
   
   iv$enable()
   
@@ -335,17 +344,19 @@ server <- function(input, output, session) {
   })
   
   
-  #input page add stock button 
+  
   portfolio <- reactiveValues(df_data = NULL)
   
   
+  #input page add stock button 
   observeEvent(input$add_portfolio , {
     
+    # error rejection 
     if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F){
       return()
     }
     
-    if (input$quantity == 0){
+    if (input$quantity == 0 | input$date1 > Sys.Date()){
       return()
     }
     
@@ -355,19 +366,25 @@ server <- function(input, output, session) {
     
     
     #weekend causing crashes 
+    # NOW ITS MONDAY CAUSING CRASH, BECAUSE STOCK MARKET NOT OPEN NO DATA
     
     tdy <- input$date1
     day <- weekdays(tdy)
     
-    if (day == 'Saturday' | day == 'Sunday') {
-      showNotification("The date you chose is a weekend. The stock market is not open on weekends.
-                       The purchase price used will be the closing price on Friday.",
-                       type = 'warning')
-    }
+
     
     pur_date <- case_when(day == "Saturday" ~ tdy - 1, 
                      day == "Sunday" ~ tdy - 2, 
                      TRUE ~ tdy)
+    
+    
+    if (day == 'Saturday' | day == 'Sunday' | tdy == Sys.Date()){
+      showNotification(paste0("The date you chose is a weekend or today.
+                              There is no stock information. We will default to
+                              using the closing price on ", as.character(pur_date), ' .'),
+                       
+                       type = 'warning')
+    }
     
     
     
