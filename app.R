@@ -153,10 +153,16 @@ body <- dashboardBody(
           
           
           materialSwitch('snp500',
-                         label = 'S&P 500 as benchmark'),
+                         label = 'S&P 500 as benchmark',
+                         right = T,
+                         width = '100%',
+                         status = 'primary'),
           
           materialSwitch('portfolio_only',
-                         label = 'Only Portfolioㅤㅤㅤㅤ'),
+                         label = 'Only Portfolio',
+                         right = T,
+                         width = '100%',
+                         status = 'primary'),
           
           br(),
           
@@ -242,7 +248,7 @@ body <- dashboardBody(
     #--------------------------------------------------------------------
     tabItem(
       tabName = 'sector',
-      headerPanel(title = 'Asset Sector Allocation'),
+      headerPanel(title = 'Sector Allocation'),
       
       tabsetPanel(
         tabPanel('Sector Allocation' , 
@@ -575,11 +581,14 @@ server <- function(input, output, session) {
       need(dim(portfolio$data)[1] != 0, "")
     )
     
-    temp <- portfolio$data %>% mutate(investment = last_price * quantity)
+    temp <- portfolio$data %>% mutate(investment = last_price * quantity,
+                                      plot_index = paste(ticker, 
+                                                         paste0('$',as.character(round(investment, digits = 2))),
+                                                        sep ="\n"))
     
     return(treemap(temp,
                    
-                   index = 'ticker',
+                   index = 'plot_index',
                    vSize = 'investment',
                    
                    title = '',
@@ -1030,7 +1039,7 @@ server <- function(input, output, session) {
                     insidetextfont = list(color = 'Black'),
                     hoverinfo = 'text',
                     text = ~paste('</br> Number of different stocks: ', Num.diff.stocks,
-                                  '</br> Total amount: ', Total.asset),
+                                  '</br> Total amount: $', Total.asset),
                     marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
@@ -1069,7 +1078,7 @@ server <- function(input, output, session) {
       
       vti_prices_1_1500 <- vti_total_mkt_holdings %>%
         mutate(ticker = str_replace(ticker, "BRK.B", "BRK-B")) %>%
-        slice(1:100) %>%
+        slice(1:300) %>%
         pull(ticker) %>%
         tq_get(start_date = start, end_date = end)
       
@@ -1281,12 +1290,15 @@ server <- function(input, output, session) {
     
     
     pie <- plot_ly(df, labels = ~ticker, values = ~allocation, type = 'pie',
-                    textposition = 'inside',
-                    textinfo = 'label+percent',
-                    insidetextfont = list(color = 'Black'),
-                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
-                    #The 'pull' attribute can also be used to create space between the sectors
-                    showlegend = TRUE)
+                  textposition = 'inside',
+                  textinfo = 'label+percent',
+                  insidetextfont = list(color = 'Black'),
+                  hoverinfo = 'text',
+                  text = ~paste('</br> Symbol: ', ticker,
+                                '</br> Allocation: $', allocation),
+                  marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                  #The 'pull' attribute can also be used to create space between the sectors
+                  showlegend = TRUE)
     
     pie <- pie %>% layout(title = 'Optimised portfolio',
                             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
