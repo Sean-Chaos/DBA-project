@@ -221,7 +221,7 @@ body <- dashboardBody(
                         top = 75,
                         left = 'auto',
                         width = '24vw',
-                        height ='45vh',
+                        height ='auto',
                         fixed= TRUE,
                         draggable = TRUE,
                         style =   "background-color: white;
@@ -896,7 +896,8 @@ server <- function(input, output, session) {
     port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       mutate(weight = capital / sum(capital))
     
-    country_df <- read.csv('NYSE_stock_country.csv') %>% as.data.frame() %>%
+    country_df <- read.csv('https://raw.githubusercontent.com/Sean-Chaos/DBA-project/main/NYSE_stock_country.csv') %>%
+      as.data.frame() %>%
       select(symbol, country)
     country_df[country_df$country == 'US','country'] <- 'United States'
     
@@ -959,7 +960,8 @@ server <- function(input, output, session) {
     port <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
       mutate(weight = capital / sum(capital))
     
-    country_df <- read.csv('NYSE_stock_country.csv') %>% as.data.frame() %>%
+    country_df <- read.csv('https://raw.githubusercontent.com/Sean-Chaos/DBA-project/main/NYSE_stock_country.csv') %>%
+      as.data.frame() %>%
       select(symbol, country)
     
     country_df[country_df$country == 'US','country'] <- 'United States'
@@ -970,14 +972,10 @@ server <- function(input, output, session) {
     port <- port %>% group_by(country) %>% 
       dplyr::summarise(weight = sum(weight), num = length(weight)) 
     
-    print(port)
-    
     port <- port %>%
       mutate(plot_index =paste(country, paste0(as.character(round(weight*100 , digits = 2)), '%'),
                                sep ="\n"))
       
-    print(port)
-    
     
     fig <- treemap(port,
                    
@@ -1038,7 +1036,8 @@ server <- function(input, output, session) {
                     textinfo = 'label+percent',
                     insidetextfont = list(color = 'Black'),
                     hoverinfo = 'text',
-                    text = ~paste('</br> Number of different stocks: ', Num.diff.stocks,
+                    text = ~paste('</br> Sector: ', sector,
+                                  '</br> Number of different stocks: ', Num.diff.stocks,
                                   '</br> Total amount: $', Total.asset),
                     marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
                     #The 'pull' attribute can also be used to create space between the sectors
@@ -1354,7 +1353,7 @@ server <- function(input, output, session) {
                 Position = Position,
                 Allocation = Allocation,
                 'Optimised Weight' = Optimised_weight,
-                'Shares to Buy or Sell' = shares_to_buy_or_sell)
+                'Required Change to Meet Optimised Portfolio' = shares_to_buy_or_sell)
     
     
     out <- out %>% datatable() %>%
