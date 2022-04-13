@@ -30,16 +30,27 @@ library(sf)
 
 
 
-header <- 
-  dashboardHeader( title = HTML("Project name"), 
-                   disable = FALSE, 
-                   titleWidth  = 550)
+
+header <- dashboardHeader()
+
+logo <- tags$a(tags$img(src='logo.png', height='40', width='40'),
+                 'project name')
+
+header$children[[2]]$children <- tags$div(
+  tags$head(tags$style(HTML(".name { background-color: #1e2b37 }"))),
+  logo,
+  class = 'name',
+  tags$style('.main-header .logo {
+  padding: 0px 0px;
+  }')
+  )
+
 
 
 
 siderbar <- 
   dashboardSidebar( 
-    width = 200,
+    width = 230,
     sidebarMenu(
       id = 'sidebar',
       style = "position: relative; overflow: visible;",
@@ -426,6 +437,9 @@ server <- function(input, output, session) {
     pur_date <- case_when(day == "Saturday" ~ tdy - 1, 
                      day == "Sunday" ~ tdy - 2, 
                      TRUE ~ tdy)
+    
+    
+    
     
     
     if (day == 'Saturday' | day == 'Sunday' | tdy == Sys.Date()){
