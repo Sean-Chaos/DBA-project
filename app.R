@@ -517,7 +517,9 @@ server <- function(input, output, session) {
       need(dim(portfolio$data)[1] != 0, "")
     )
     
-    temp <- portfolio$data %>% mutate(last_price = round(last_price, digits = 2),
+    temp <- portfolio$data 
+    rownames(temp) <- NULL
+    temp <- temp %>% mutate(last_price = round(last_price, digits = 2),
                                       purchase_price = round(purchase_price, digits = 2)) %>% 
       transmute(Ticker = ticker,
                 Position = quantity, 
@@ -799,6 +801,7 @@ server <- function(input, output, session) {
     )
     
     temp <- portfolio$data 
+    rownames(temp) <- NULL
     
     out <- temp %>% transmute('Symbol' = ticker,
                               'Qantity' = quantity,
@@ -812,7 +815,8 @@ server <- function(input, output, session) {
       formatStyle(c('Unrealised gains','Unrealised P&L'),
                   valueColumns = 'Unrealised gains',
                   color = styleInterval(cuts = 0, values = c("red", "green")))
-      
+    
+    
     
     return(out)
     
@@ -1185,6 +1189,8 @@ server <- function(input, output, session) {
                                                       Asset_value = Total.asset,
                                                       Weight = paste0(as.character(round(Total.asset/sum(Total.asset) * 100, digits = 2)), '%'))
     
+    rownames(stock.sector.num) <- NULL
+    
     return(stock.sector.num)
     
   })
@@ -1331,7 +1337,9 @@ server <- function(input, output, session) {
     )
     
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
+    
     temp <- optimised_port$data
+    rownames(temp) <- NULL
     
     temp1 <- data.frame(ticker = list_of_tickers,
                              allocation = as.vector(temp$weights)) %>% 
