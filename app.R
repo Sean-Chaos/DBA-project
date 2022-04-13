@@ -1357,7 +1357,7 @@ server <- function(input, output, session) {
     
     
     out <- out %>% datatable() %>%
-      formatStyle(c('Shares to Buy or Sell'),
+      formatStyle(c('Required Change to Meet Optimised Portfolio'),
                 color = styleInterval(cuts = 0, values = c("red", "green")))
     
     return(out)
