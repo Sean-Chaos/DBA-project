@@ -309,7 +309,7 @@ body <- dashboardBody(
             tabPanel('Optimised risk', br(), plotlyOutput('opti_risk'))
             
           ),
-          h3('Propsed Portfolio'),
+          h3('Proposed Portfolio'),
           div(DT::dataTableOutput("table1"))
           
         ),
@@ -401,8 +401,9 @@ server <- function(input, output, session) {
   #input page add stock button 
   observeEvent(input$add_portfolio , {
     
+    
     # error rejection 
-    if (tryCatch(getSymbols(input$ticker), error = function(x){F},warning = function(x){F}) == F){
+    if (tryCatch(getSymbols(input$ticker, auto.assign = F), error = function(x){F}, warning = function(x){F}) == F){
       return()
     }
     
@@ -421,7 +422,6 @@ server <- function(input, output, session) {
     tdy <- input$date1
     day <- weekdays(tdy)
     
-
     
     pur_date <- case_when(day == "Saturday" ~ tdy - 1, 
                      day == "Sunday" ~ tdy - 2, 
@@ -790,7 +790,7 @@ server <- function(input, output, session) {
                               'Qantity' = quantity,
                               'Position' = round(quantity * purchase_price,2),
                               'Last price' = round(last_price,2),
-                              'Cost' = round(purchase_price,2),
+                              'Cost' = round(purchase_price * quantity,2),
                               'Unrealised gains' = round(last_price - purchase_price,2),
                               'Unrealised P&L' = paste0(as.character(round((last_price - purchase_price)/last_price * 100,2)),'%')
                               ) %>% 
