@@ -98,7 +98,7 @@ body <- dashboardBody(
       sidebarLayout(
         sidebarPanel(
           
-          headerPanel(title = 'Input pannel'),
+          headerPanel(title = 'Input panel'),
           h6('Please add the stocks that you have in your portfolio currently'),
           
           verbatimTextOutput('ticker'),
@@ -523,9 +523,9 @@ server <- function(input, output, session) {
                                       purchase_price = round(purchase_price, digits = 2)) %>% 
       transmute(Ticker = ticker,
                 Position = quantity, 
-                Last = last_price,
+                Last = scales::dollar(last_price),
                 "Date Purchased" = purchase_date,
-                Cost = purchase_price)
+                Cost = scales::dollar(purchase_price))
     
     return(temp)
     
@@ -548,7 +548,7 @@ server <- function(input, output, session) {
     temp <- portfolio$data
     
     out <- temp %>% transmute(weight = quantity * last_price) %>% sum(.$weight) %>%
-      round(.,digits = 2) %>% as.character() %>% paste0('$', .)
+      scales::dollar(.) 
     
     return(out)
     
@@ -631,10 +631,9 @@ server <- function(input, output, session) {
     
     
     
-    
     temp <- portfolio$data %>% mutate(investment = last_price * quantity,
                                       plot_index = paste(ticker, 
-                                                         paste0('$',as.character(round(investment, digits = 2))),
+                                                         as.character(scales::dollar(investment)),
                                                         sep ="\n"))
     
     return(treemap(temp,
@@ -839,10 +838,10 @@ server <- function(input, output, session) {
     
     out <- temp %>% transmute('Symbol' = ticker,
                               'Qantity' = quantity,
-                              'Position' = round(quantity * purchase_price,2),
-                              'Last price' = round(last_price,2),
-                              'Cost' = round(purchase_price * quantity,2),
-                              'Unrealised gains' = round(last_price - purchase_price,2),
+                              'Position' = scales::dollar(quantity * purchase_price) ,
+                              'Last price' = scales::dollar(last_price),
+                              'Cost' = scales::dollar(purchase_price * quantity),
+                              'Unrealised gains' = scales::dollar(last_price - purchase_price),
                               'Unrealised P&L' = paste0(as.character(round((last_price - purchase_price)/last_price * 100,2)),'%')
                               ) %>% 
       datatable() %>% 
@@ -1218,7 +1217,7 @@ server <- function(input, output, session) {
     
     stock.sector.num <- stock.sector.num %>% transmute(Sector = sector, 
                                                       Stocks = Num.diff.stocks,
-                                                      Asset_value = Total.asset,
+                                                      Asset_value = scales::dollar(Total.asset),
                                                       Weight = paste0(as.character(round(Total.asset/sum(Total.asset) * 100, digits = 2)), '%'))
     
     rownames(stock.sector.num) <- NULL
@@ -1381,7 +1380,7 @@ server <- function(input, output, session) {
                   insidetextfont = list(color = 'Black'),
                   hoverinfo = 'text',
                   text = ~paste('</br> Symbol: ', ticker,
-                                '</br> Allocation: $', allocation),
+                                '</br> Allocation: ', (allocation*100), '%'),
                   marker = list(colors = brewer.pal(n = 9, name = "Pastel1")),
                   #The 'pull' attribute can also be used to create space between the sectors
                   showlegend = TRUE)
