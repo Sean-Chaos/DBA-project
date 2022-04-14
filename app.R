@@ -895,8 +895,8 @@ server <- function(input, output, session) {
     
     fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
       layout(title = 'Daily Portfolio Returns: 2 Years',
-             yaxis = list(title = 'Portfolio Returns'),
-             xaxis = list(title = 'Frequency')
+             yaxis = list(title = 'Frequency'),
+             xaxis = list(title = 'Portfolio Returns')
              )
     
     return(fig)
@@ -1087,7 +1087,7 @@ server <- function(input, output, session) {
                     hoverinfo = 'text',
                     text = ~paste('</br> Sector: ', sector,
                                   '</br> Number of different stocks: ', Num.diff.stocks,
-                                  '</br> Total amount: $', Total.asset),
+                                  '</br> Total amount: ', scales::dollar(Total.asset)),
                     marker = list(colors = brewer.pal(n = 9, name = "Pastel1")),
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
@@ -1558,8 +1558,8 @@ server <- function(input, output, session) {
     
     fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
       layout(title = 'Daily Portfolio Returns: 2 Years',
-             yaxis = list(title = 'Proposed Portfolio Returns'),
-             xaxis = list(title = 'Frequency')
+             xaxis = list(title = 'Proposed Portfolio Returns'),
+             yaxis = list(title = 'Frequency')
       )
     
     return(fig)
