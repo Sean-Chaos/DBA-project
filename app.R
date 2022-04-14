@@ -34,7 +34,7 @@ library(sf)
 header <- dashboardHeader()
 
 logo <- tags$a(tags$img(src='logo.png', height='40', width='40'),
-                 'project name')
+                 'Investizer')
 
 header$children[[2]]$children <- tags$div(
   tags$head(tags$style(HTML(".name { background-color: #1e2b37 }"))),
@@ -118,7 +118,7 @@ body <- dashboardBody(
                     value = Sys.Date()-1),
           
           numericInput('quantity',
-                       label = 'Quantity of stock', min = 0, value = 0 ),
+                       label = 'Quantity of stock', min = 0, value = 1 ),
           
           actionButton('add_portfolio',
                        label = 'add',
@@ -597,6 +597,41 @@ server <- function(input, output, session) {
       need(dim(portfolio$data)[1] != 0, "")
     )
     
+    #------------------------------------------------------------
+    #This is for the standard deviation and the portfolio annual returns
+    tickers <-  portfolio$data[,1] %>% as.vector()
+    
+    wts <- portfolio$data %>% mutate(capital = last_price * quantity) %>%
+      transmute(weight = capital / sum(capital)) %>% as.vector() %>% unlist()
+    
+    #processing
+    price_data <- tq_get(tickers,
+                         from = Sys.Date()-720,
+                         to = Sys.Date(),
+                         get = 'stock.prices')
+    
+    ret_data <- price_data %>%
+      group_by(symbol) %>%
+      tq_transmute(select = adjusted,
+                   mutate_fun = periodReturn,
+                   period = "daily",
+                   col_rename = "ret") %>%
+      tq_portfolio(assets_col = symbol,
+                   returns_col = ret,
+                   weights = wts,
+                   geometric = FALSE,
+                   col_rename = 'port_ret')
+    
+    print(sd(ret_data$port_ret, na.rm = TRUE))
+    
+    port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
+    port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
+    
+    #-------------------------------------------------------------
+    
+    
+    
+    
     temp <- portfolio$data %>% mutate(investment = last_price * quantity,
                                       plot_index = paste(ticker, 
                                                          paste0('$',as.character(round(investment, digits = 2))),
@@ -710,7 +745,6 @@ server <- function(input, output, session) {
     ticker_name <- portfolio$data[,1] %>% as.vector()
     
     temp <- list()
-    
     
     
     
@@ -859,8 +893,6 @@ server <- function(input, output, session) {
                    geometric = FALSE,
                    col_rename = 'port_ret')
     
-    port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
-    port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
     
     fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
       layout(title = 'Daily Portfolio Returns: 2 Years',
@@ -881,9 +913,9 @@ server <- function(input, output, session) {
     )
     
     temp <- port_mean$data %>% as.numeric() 
-    temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
+    temp <- (temp*100*20) %>% round(., digits = 2) %>%  as.character()  
     
-    return(paste0('Average portfolio returns: ' , '\n', temp, '%'))
+    return(paste0('Monthly portfolio returns: ' , '\n', temp, '%'))
   })
   
   
@@ -895,9 +927,9 @@ server <- function(input, output, session) {
     )
     
     temp <- port_sd$data %>% as.numeric() 
-    temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
+    temp <- (sqrt((temp**2)*20)) %>% round(., digits = 2) %>% as.character() 
     
-    return(paste0('Portfolio standard deviation: ', '\n' ,  temp , '%'))
+    return(paste0('Monthly standard deviation: ', '\n' ,  temp , '%'))
   })
   
   
@@ -932,7 +964,7 @@ server <- function(input, output, session) {
     
     
     #colour pallete
-    factpal <- colorBin(palette = 'viridis', domain = world_sf$weight, na.color = 'transparent')
+    factpal <- colorBin(palette = 'RdBu', domain = world_sf$weight, na.color = 'transparent')
     
     #text labels
     mylabels <- paste(
@@ -1057,7 +1089,7 @@ server <- function(input, output, session) {
                     text = ~paste('</br> Sector: ', sector,
                                   '</br> Number of different stocks: ', Num.diff.stocks,
                                   '</br> Total amount: $', Total.asset),
-                    marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                    marker = list(colors = brewer.pal(n = 9, name = "Pastel1")),
                     #The 'pull' attribute can also be used to create space between the sectors
                     showlegend = TRUE)
     
@@ -1301,6 +1333,41 @@ server <- function(input, output, session) {
       need(length(optimised_port$data) != 0, "")
     )
     
+    
+    #---------------------------------------------------------------
+    #Adding standard deviation and portfolio returns 
+    
+    # data 
+    tickers <-  portfolio$data[,1] %>% as.vector()
+    
+    temp <- optimised_port$data
+    wts <- as.vector(temp$weights)
+    
+    #processing
+    price_data <- tq_get(tickers,
+                         from = Sys.Date()-720,
+                         to = Sys.Date(),
+                         get = 'stock.prices')
+    
+    ret_data <- price_data %>%
+      group_by(symbol) %>%
+      tq_transmute(select = adjusted,
+                   mutate_fun = periodReturn,
+                   period = "daily",
+                   col_rename = "ret") %>%
+      tq_portfolio(assets_col = symbol,
+                   returns_col = ret,
+                   weights = wts,
+                   geometric = FALSE,
+                   col_rename = 'port_ret')
+    
+    opti_port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
+    opti_port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
+    
+    
+    #---------------------------------------------------------------
+    
+    
     list_of_tickers <- portfolio$data[,1] %>% as.vector()
     temp <- optimised_port$data
     
@@ -1315,7 +1382,7 @@ server <- function(input, output, session) {
                   hoverinfo = 'text',
                   text = ~paste('</br> Symbol: ', ticker,
                                 '</br> Allocation: $', allocation),
-                  marker = list(colors = brewer.pal(n = 10, name = "Pastel1")),
+                  marker = list(colors = brewer.pal(n = 9, name = "Pastel1")),
                   #The 'pull' attribute can also be used to create space between the sectors
                   showlegend = TRUE)
     
@@ -1489,9 +1556,6 @@ server <- function(input, output, session) {
                    geometric = FALSE,
                    col_rename = 'port_ret')
     
-    opti_port_mean$data <- mean(ret_data$port_ret, na.rm = TRUE)
-    opti_port_sd$data <- sd(ret_data$port_ret, na.rm = TRUE)
-    
     
     fig <- plot_ly(ret_data, x =~port_ret, type = 'histogram', marker = list(color = 'grey')) %>% 
       layout(title = 'Daily Portfolio Returns: 2 Years',
@@ -1512,9 +1576,9 @@ server <- function(input, output, session) {
     )
     
     temp <- opti_port_mean$data %>% as.numeric() 
-    temp <- (temp*100) %>% round(., digits = 4) %>%  as.character()  
+    temp <- (temp*100*20) %>% round(., digits = 2) %>%  as.character()  
     
-    return(paste0('Portfolio returns: ' , '\n', temp, '%'))
+    return(paste0('Proposed monthly returns: ' , '\n', temp, '%'))
   })
   
   
@@ -1526,9 +1590,9 @@ server <- function(input, output, session) {
     )
     
     temp <- opti_port_sd$data %>% as.numeric() 
-    temp <- (temp*100) %>% round(., digits = 2) %>% as.character() 
+    temp <- (sqrt((temp**2)*20)) %>% round(., digits = 2) %>% as.character() 
     
-    return(paste0('Portfolio standard deviation: ' , '\n', temp , '%'))
+    return(paste0('Proposed monthly standard deviation: ' , '\n', temp , '%'))
   })
   
   
