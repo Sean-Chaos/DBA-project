@@ -963,7 +963,7 @@ server <- function(input, output, session) {
     
     
     #colour pallete
-    factpal <- colorBin(palette = 'RdBu', domain = world_sf$weight, na.color = 'transparent')
+    factpal <- colorBin(palette = 'viridis', domain = world_sf$weight, na.color = 'transparent')
     
     #text labels
     mylabels <- paste(
